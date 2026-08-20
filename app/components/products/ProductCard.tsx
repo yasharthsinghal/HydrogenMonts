@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { Link } from '@remix-run/react';
-import { Eye, ShoppingBag } from 'lucide-react';
+import { Link, useFetcher } from '@remix-run/react';
+import { Eye, ShoppingBag, Loader2 } from 'lucide-react';
 import type { ProductCardItem } from '~/types/storefront.types';
 import { Badge } from '~/components/ui/Badge';
 
@@ -16,6 +16,8 @@ export const ProductCard: React.FC<ProductCardProps> = ({
   onAddToCart,
 }) => {
   const [isHovered, setIsHovered] = useState(false);
+  const fetcher = useFetcher();
+  const isAdding = fetcher.state !== 'idle';
 
   const featuredImage = product.featuredImage?.url;
   const secondaryImage = product.images?.nodes?.[1]?.url || featuredImage;
@@ -23,6 +25,34 @@ export const ProductCard: React.FC<ProductCardProps> = ({
   const compareAtPrice = product.compareAtPriceRange?.minVariantPrice;
   const isOnSale = compareAtPrice && parseFloat(compareAtPrice.amount) > parseFloat(price.amount);
   const firstVariant = product.variants.nodes[0];
+
+  const handleCartClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    if (onAddToCart && firstVariant?.id) {
+      onAddToCart(firstVariant.id);
+      return;
+    }
+
+    if (!firstVariant?.id) return;
+
+    fetcher.submit(
+      {
+        cartFormInput: JSON.stringify({
+          action: 'LinesAdd',
+          inputs: {
+            lines: [{ merchandiseId: firstVariant.id, quantity: 1 }],
+          },
+        }),
+      },
+      { method: 'POST', action: '/cart' },
+    );
+
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('open-cart'));
+    }
+  };
 
   const formatPrice = (amount: string, currency: string) => {
     const numeric = parseFloat(amount);
@@ -84,15 +114,19 @@ export const ProductCard: React.FC<ProductCardProps> = ({
             </Link>
           )}
 
-          {firstVariant && onAddToCart && (
+          {firstVariant && (
             <button
-              onClick={() => onAddToCart(firstVariant.id)}
-              disabled={!firstVariant.availableForSale}
+              onClick={handleCartClick}
+              disabled={!firstVariant.availableForSale || isAdding}
               className="py-2.5 px-4 text-xs font-semibold flex items-center justify-center transition-colors bg-[#c4622d] text-white hover:bg-[#923f12] disabled:bg-[#e1dcd5] cursor-pointer"
               style={{ fontFamily: "'DM Sans', sans-serif" }}
-              title="Add to Cart"
+              title={firstVariant.availableForSale ? 'Add to Cart' : 'Sold Out'}
             >
-              <ShoppingBag className="w-4 h-4" />
+              {isAdding ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <ShoppingBag className="w-4 h-4" />
+              )}
             </button>
           )}
         </div>

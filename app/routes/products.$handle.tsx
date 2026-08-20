@@ -1,5 +1,5 @@
 import { json, type LoaderFunctionArgs } from '@shopify/remix-oxygen';
-import { useLoaderData, type MetaFunction } from '@remix-run/react';
+import { useLoaderData, useFetcher, type MetaFunction } from '@remix-run/react';
 import { useState } from 'react';
 import { PRODUCT_BY_HANDLE_QUERY, RECOMMENDED_PRODUCTS_QUERY } from '~/graphql/StorefrontQueries';
 import type { ProductDetailItem, ProductCardItem, ProductVariantNode } from '~/types/storefront.types';
@@ -79,7 +79,8 @@ export default function ProductDetailRoute() {
   );
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const [quantity, setQuantity] = useState(1);
-  const [addingToCart, setAddingToCart] = useState(false);
+  const fetcher = useFetcher();
+  const addingToCart = fetcher.state !== 'idle';
 
   const images = product.media?.nodes?.map((m) => m.image?.url).filter(Boolean) as string[] || [
     product.featuredImage?.url || '',
@@ -103,15 +104,12 @@ export default function ProductDetailRoute() {
     }).format(numeric);
   };
 
-  const handleAddToCart = async () => {
+  const handleAddToCart = () => {
     if (!selectedVariant?.id) return;
-    setAddingToCart(true);
 
-    try {
-      const formData = new FormData();
-      formData.append(
-        'cartFormInput',
-        JSON.stringify({
+    fetcher.submit(
+      {
+        cartFormInput: JSON.stringify({
           action: 'LinesAdd',
           inputs: {
             lines: [
@@ -122,18 +120,12 @@ export default function ProductDetailRoute() {
             ],
           },
         }),
-      );
+      },
+      { method: 'POST', action: '/cart' },
+    );
 
-      await fetch('/cart', {
-        method: 'POST',
-        body: formData,
-      });
-
-      window.location.href = '/cart';
-    } catch (error) {
-      console.error('Add to cart error:', error);
-    } finally {
-      setAddingToCart(false);
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('open-cart'));
     }
   };
 

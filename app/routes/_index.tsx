@@ -152,7 +152,7 @@ export default function IndexRoute() {
               className="inline-flex items-center justify-center px-8 py-3.5 text-sm font-semibold rounded-[6px] transition-all bg-[#c4622d] text-white hover:bg-[#923f12] cursor-pointer"
               style={{ fontFamily: "'DM Sans', sans-serif" }}
             >
-              Shop Collection
+              Shop The Collection
             </Link>
             <Link
               to="/collections"

@@ -9,7 +9,7 @@ import {
   isRouteErrorResponse,
 } from '@remix-run/react';
 import { type LoaderFunctionArgs, type LinksFunction, json } from '@shopify/remix-oxygen';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import appStyles from '~/styles/app.css?url';
 import { Header } from '~/components/common/Header';
 import { Footer } from '~/components/common/Footer';
@@ -43,6 +43,12 @@ export function Layout({ children }: { children?: React.ReactNode }) {
   const cart = data?.cart;
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [cartDrawerOpen, setCartDrawerOpen] = useState(false);
+
+  useEffect(() => {
+    const handleOpenCart = () => setCartDrawerOpen(true);
+    window.addEventListener('open-cart', handleOpenCart);
+    return () => window.removeEventListener('open-cart', handleOpenCart);
+  }, []);
 
   return (
     <html lang="en" suppressHydrationWarning>

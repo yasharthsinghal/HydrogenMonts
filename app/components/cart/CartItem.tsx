@@ -40,19 +40,40 @@ export const CartItem: React.FC<CartLineItemProps> = ({
   onRemoveLine,
   isUpdating = false,
 }) => {
-  const { merchandise, cost, quantity, id } = line;
-  const product = merchandise.product;
-  const image = merchandise.image?.url;
+  const merchandise = line?.merchandise;
+  const cost = line?.cost;
+  const quantity = line?.quantity ?? 1;
+  const id = line?.id;
 
-  const formatPrice = (amount: string, currency: string) => {
-    const numeric = parseFloat(amount);
-    if (isNaN(numeric)) return `${currency} ${amount}`;
+  const product = merchandise?.product || {
+    title: merchandise?.title || 'Handcrafted Piece',
+    handle: '',
+  };
+  const image = merchandise?.image?.url;
+
+  const formatPrice = (amount: string | number, currency?: string) => {
+    const numeric = typeof amount === 'number' ? amount : parseFloat(amount);
+    if (isNaN(numeric)) return `${currency || 'INR'} ${amount}`;
     return new Intl.NumberFormat('en-IN', {
       style: 'currency',
       currency: currency || 'INR',
       maximumFractionDigits: 0,
     }).format(numeric);
   };
+
+  const unitAmount =
+    cost?.amountPerQuantity?.amount ||
+    (merchandise as any)?.price?.amount ||
+    '0';
+  const unitCurrency =
+    cost?.amountPerQuantity?.currencyCode ||
+    (merchandise as any)?.price?.currencyCode ||
+    'INR';
+  const totalAmount =
+    cost?.totalAmount?.amount ||
+    (parseFloat(unitAmount) * quantity).toString();
+  const totalCurrency =
+    cost?.totalAmount?.currencyCode || unitCurrency;
 
   return (
     <div
@@ -69,7 +90,7 @@ export const CartItem: React.FC<CartLineItemProps> = ({
         {image ? (
           <img
             src={image}
-            alt={merchandise.image?.altText || product.title}
+            alt={merchandise?.image?.altText || product.title}
             className="w-full h-full object-cover"
           />
         ) : (
@@ -81,14 +102,23 @@ export const CartItem: React.FC<CartLineItemProps> = ({
       <div className="flex-1 flex flex-col justify-between">
         <div>
           <div className="flex justify-between items-start gap-2">
-            <Link
-              to={`/products/${product.handle}`}
-              className="text-sm font-semibold text-[#060505] hover:text-[#c4622d] transition-colors leading-snug line-clamp-1"
-              style={{ fontFamily: "'Playfair Display', serif" }}
-            >
-              {product.title}
-            </Link>
-            {onRemoveLine && (
+            {product.handle ? (
+              <Link
+                to={`/products/${product.handle}`}
+                className="text-sm font-semibold text-[#060505] hover:text-[#c4622d] transition-colors leading-snug line-clamp-1"
+                style={{ fontFamily: "'Playfair Display', serif" }}
+              >
+                {product.title}
+              </Link>
+            ) : (
+              <span
+                className="text-sm font-semibold text-[#060505] leading-snug line-clamp-1"
+                style={{ fontFamily: "'Playfair Display', serif" }}
+              >
+                {product.title}
+              </span>
+            )}
+            {onRemoveLine && id && (
               <button
                 type="button"
                 onClick={() => onRemoveLine(id)}
@@ -100,17 +130,14 @@ export const CartItem: React.FC<CartLineItemProps> = ({
             )}
           </div>
 
-          {merchandise.title && merchandise.title !== 'Default Title' && (
+          {merchandise?.title && merchandise.title !== 'Default Title' && (
             <span className="text-xs text-[#686764] block mt-0.5">
               {merchandise.title}
             </span>
           )}
 
           <span className="text-xs font-semibold text-[#2c2c2c] block mt-1">
-            {formatPrice(
-              cost.amountPerQuantity.amount,
-              cost.amountPerQuantity.currencyCode,
-            )}
+            {formatPrice(unitAmount, unitCurrency)}
           </span>
         </div>
 
@@ -119,7 +146,7 @@ export const CartItem: React.FC<CartLineItemProps> = ({
           <div className="flex items-center border border-[#e8e4df] rounded-[4px] bg-[#faf8f5]">
             <button
               type="button"
-              onClick={() => onUpdateQuantity?.(id, Math.max(0, quantity - 1))}
+              onClick={() => id && onUpdateQuantity?.(id, Math.max(0, quantity - 1))}
               className="p-1.5 text-[#686764] hover:text-[#060505] cursor-pointer"
               aria-label="Decrease quantity"
             >
@@ -130,7 +157,7 @@ export const CartItem: React.FC<CartLineItemProps> = ({
             </span>
             <button
               type="button"
-              onClick={() => onUpdateQuantity?.(id, quantity + 1)}
+              onClick={() => id && onUpdateQuantity?.(id, quantity + 1)}
               className="p-1.5 text-[#686764] hover:text-[#060505] cursor-pointer"
               aria-label="Increase quantity"
             >
@@ -139,7 +166,7 @@ export const CartItem: React.FC<CartLineItemProps> = ({
           </div>
 
           <span className="text-sm font-bold text-[#060505]">
-            {formatPrice(cost.totalAmount.amount, cost.totalAmount.currencyCode)}
+            {formatPrice(totalAmount, totalCurrency)}
           </span>
         </div>
       </div>
