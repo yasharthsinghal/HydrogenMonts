@@ -1,0 +1,134 @@
+@import url('https://fonts.googleapis.com/css2?family=Cormorant:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=DM+Sans:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&display=swap');
+@import "tailwindcss";
+
+@theme {
+  /* === Pipeline Live Store Colors === */
+  --color-primary: #c4622d;
+  --color-primary-hover: #923f12;
+  --color-primary-opposite: #ffffff;
+
+  --color-secondary: #f0edea;
+  --color-secondary-hover: #dac7b4;
+
+  --color-bg: #f5f0e8;
+  --color-bg-accent: #f8f8f8;
+
+  --color-text-dark: #060505;
+  --color-text: #2c2c2c;
+  --color-text-light: #686764;
+
+  --color-nav: #faf8f5;
+  --color-nav-text: #1a1a1a;
+  --color-nav-border: #e8e4df;
+
+  --color-announcement-bg: #1a1a1a;
+  --color-announcement-text: #ffffff;
+
+  --color-footer-bg: #1a1a1a;
+  --color-footer-text: #ffffff;
+  --color-sub-footer-bg: #0d0d0d;
+
+  --color-inverse-bg: #1a1a1a;
+  --color-inverse-text: #ffffff;
+  --color-inverse-primary: #e8dfd5;
+
+  --color-bright-bg: #e8dfd5;
+  --color-bright-accent: #8b7355;
+  --color-bright-text: #1a1a1a;
+  --color-bright-primary: #8b7355;
+
+  --color-disabled-bg: #e1dcd5;
+  --color-disabled-text: #afaba6;
+
+  --color-badge-bg: #f5f5f5;
+  --color-badge-text: #000000;
+
+  --color-highlight: #d32f2f;
+
+  /* === Fonts === */
+  --font-sans: 'DM Sans', system-ui, -apple-system, sans-serif;
+  --font-serif: 'Playfair Display', Georgia, serif;
+  --font-body: 'Cormorant', Georgia, serif;
+
+  /* === Layout === */
+  --layout-width: 1400px;
+  --layout-gutter: 40px;
+  --layout-outer: 50px;
+
+  /* === Shadows === */
+  --shadow-card: 0 2px 12px rgba(0, 0, 0, 0.06);
+  --shadow-elevated: 0 8px 32px rgba(0, 0, 0, 0.12);
+  --shadow-drawer: -4px 0 24px rgba(0, 0, 0, 0.15);
+}
+
+/* === Responsive Font Scale (Pipeline type-scale) === */
+:root {
+  --font-1: 10px; --font-2: 12px; --font-3: 14px; --font-4: 16px;
+  --font-5: 19px; --font-6: 22px; --font-7: 25px; --font-8: 29px;
+  --font-9: 34px; --font-10: 39px; --font-11: 46px;
+  --font-12: 53px; --font-13: 61px; --font-14: 71px; --font-15: 83px;
+}
+
+@media only screen and (min-width: 480px) and (max-width: 1099px) {
+  :root {
+    --font-4: 16.5px; --font-5: 19.5px; --font-6: 23px; --font-7: 27px;
+    --font-8: 32px; --font-9: 37px; --font-10: 44px; --font-11: 51px;
+    --font-12: 60px; --font-13: 71px; --font-14: 83px; --font-15: 98px;
+  }
+}
+
+@media only screen and (min-width: 1100px) {
+  :root {
+    --font-3: 15px; --font-4: 18px; --font-5: 22px; --font-6: 27px;
+    --font-7: 32px; --font-8: 40px; --font-9: 48px; --font-10: 59px;
+    --font-11: 72px; --font-12: 88px; --font-13: 107px; --font-14: 130px;
+    --font-15: 159px;
+  }
+}
+
+html {
+  scroll-behavior: smooth;
+  color: #2c2c2c;
+  background-color: #f5f0e8;
+  font-family: 'Cormorant', Georgia, serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  overflow-x: hidden;
+  min-height: 100vh;
+  background-color: #f5f0e8;
+  color: #2c2c2c;
+  font-family: 'Cormorant', Georgia, serif;
+}
+
+/* Headings use Playfair Display */
+h1, h2, h3, h4, h5, h6 {
+  font-family: 'Playfair Display', Georgia, serif;
+}
+
+/* UI elements (buttons, labels, nav, inputs) use DM Sans */
+button, input, select, textarea, label, nav, [role="tab"], [role="button"] {
+  font-family: 'DM Sans', system-ui, sans-serif;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: #f0edea; }
+::-webkit-scrollbar-thumb { background: #c4a882; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #8b7355; }
+
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+/* Subtle reveal utility */
+.reveal {
+  opacity: 0;
+  transform: translateY(16px);
+  transition: opacity 0.5s ease, transform 0.5s ease;
+}
+.reveal.is-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
