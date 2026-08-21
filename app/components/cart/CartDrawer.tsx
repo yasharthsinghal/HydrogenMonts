@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Link } from '@remix-run/react';
+import { Link, useFetcher } from '@remix-run/react';
 import { X, ShoppingBag, ArrowRight } from 'lucide-react';
 import { CartItem } from './CartItem';
 import { EmptyState } from '~/components/ui/EmptyState';
@@ -33,7 +33,8 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
   onClose,
   cart,
 }) => {
-  const [isMutating, setIsMutating] = useState(false);
+  const cartFetcher = useFetcher();
+  const isMutating = cartFetcher.state !== 'idle';
 
   useEffect(() => {
     if (isOpen) {
@@ -63,38 +64,37 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
     }).format(amount);
   };
 
-  const handleUpdateQuantity = async (lineId: string, quantity: number) => {
-    setIsMutating(true);
-    try {
-      const formData = new FormData();
-      if (quantity === 0) {
-        formData.append(
-          'cartFormInput',
-          JSON.stringify({
-            action: 'LinesRemove',
-            inputs: { lineIds: [lineId] },
-          }),
-        );
-      } else {
-        formData.append(
-          'cartFormInput',
-          JSON.stringify({
-            action: 'LinesUpdate',
-            inputs: { lines: [{ id: lineId, quantity }] },
-          }),
-        );
-      }
-      await fetch('/cart', { method: 'POST', body: formData });
-      window.location.reload();
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setIsMutating(false);
+  const handleUpdateQuantity = (lineId: string, quantity: number) => {
+    const formData = new FormData();
+    if (quantity === 0) {
+      formData.append(
+        'cartFormInput',
+        JSON.stringify({
+          action: 'LinesRemove',
+          inputs: { lineIds: [lineId] },
+        }),
+      );
+    } else {
+      formData.append(
+        'cartFormInput',
+        JSON.stringify({
+          action: 'LinesUpdate',
+          inputs: { lines: [{ id: lineId, quantity }] },
+        }),
+      );
     }
+    cartFetcher.submit(formData, { method: 'POST', action: '/cart' });
   };
 
-  const handleRemoveLine = async (lineId: string) => {
-    await handleUpdateQuantity(lineId, 0);
+  const handleRemoveLine = (lineId: string) => {
+    handleUpdateQuantity(lineId, 0);
+  };
+
+  const [isRedirecting, setIsRedirecting] = useState(false);
+
+  const handleCheckout = (e: React.MouseEvent<HTMLAnchorElement>) => {
+    if (!cart?.checkoutUrl || isRedirecting) return;
+    setIsRedirecting(true);
   };
 
   return (
@@ -194,11 +194,26 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
             {cart?.checkoutUrl ? (
               <a
                 href={cart.checkoutUrl}
+                onClick={handleCheckout}
                 className="w-full"
               >
-                <Button variant="primary" size="lg" className="w-full flex items-center justify-center gap-2">
-                  <span>Proceed to Checkout</span>
-                  <ArrowRight className="w-4 h-4" />
+                <Button
+                  variant="primary"
+                  size="lg"
+                  disabled={isRedirecting || isMutating}
+                  className="w-full flex items-center justify-center gap-2"
+                >
+                  {isRedirecting ? (
+                    <>
+                      <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                      <span>Redirecting to Checkout...</span>
+                    </>
+                  ) : (
+                    <>
+                      <span>Proceed to Checkout</span>
+                      <ArrowRight className="w-4 h-4" />
+                    </>
+                  )}
                 </Button>
               </a>
             ) : (

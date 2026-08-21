@@ -1,5 +1,6 @@
+import { useState } from 'react';
 import { json, type ActionFunctionArgs, type LoaderFunctionArgs } from '@shopify/remix-oxygen';
-import { useLoaderData, Link, type MetaFunction } from '@remix-run/react';
+import { useLoaderData, useFetcher, Link, type MetaFunction } from '@remix-run/react';
 import { CartItem } from '~/components/cart/CartItem';
 import { Breadcrumb } from '~/components/ui/Breadcrumb';
 import { EmptyState } from '~/components/ui/EmptyState';
@@ -71,6 +72,7 @@ export async function loader({ context }: LoaderFunctionArgs) {
 
 export default function CartRoute() {
   const { cart } = useLoaderData<typeof loader>() as { cart: any };
+  const [isRedirecting, setIsRedirecting] = useState(false);
 
   const lines = cart?.lines?.nodes || [];
   const subtotal = cart?.cost?.subtotalAmount?.amount ? parseFloat(cart.cost.subtotalAmount.amount) : 0;
@@ -84,7 +86,15 @@ export default function CartRoute() {
     }).format(amount);
   };
 
-  const handleUpdateQuantity = async (lineId: string, quantity: number) => {
+  const handleCheckout = (e: React.MouseEvent<HTMLAnchorElement>) => {
+    if (!cart?.checkoutUrl || isRedirecting) return;
+    setIsRedirecting(true);
+  };
+
+  const cartFetcher = useFetcher();
+  const isMutating = cartFetcher.state !== 'idle';
+
+  const handleUpdateQuantity = (lineId: string, quantity: number) => {
     const formData = new FormData();
     if (quantity === 0) {
       formData.append(
@@ -103,8 +113,7 @@ export default function CartRoute() {
         }),
       );
     }
-    await fetch('/cart', { method: 'POST', body: formData });
-    window.location.reload();
+    cartFetcher.submit(formData, { method: 'POST', action: '/cart' });
   };
 
   return (
@@ -136,6 +145,7 @@ export default function CartRoute() {
                 line={line}
                 onUpdateQuantity={handleUpdateQuantity}
                 onRemoveLine={(id) => handleUpdateQuantity(id, 0)}
+                isUpdating={isMutating}
               />
             ))}
           </div>
@@ -162,10 +172,24 @@ export default function CartRoute() {
             </div>
 
             {cart?.checkoutUrl ? (
-              <a href={cart.checkoutUrl} className="w-full">
-                <Button variant="primary" size="lg" className="w-full flex items-center justify-center gap-2">
-                  <span>Proceed to Checkout</span>
-                  <ArrowRight className="w-4 h-4" />
+              <a href={cart.checkoutUrl} onClick={handleCheckout} className="w-full">
+                <Button
+                  variant="primary"
+                  size="lg"
+                  disabled={isRedirecting}
+                  className="w-full flex items-center justify-center gap-2"
+                >
+                  {isRedirecting ? (
+                    <>
+                      <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                      <span>Redirecting to Checkout...</span>
+                    </>
+                  ) : (
+                    <>
+                      <span>Proceed to Checkout</span>
+                      <ArrowRight className="w-4 h-4" />
+                    </>
+                  )}
                 </Button>
               </a>
             ) : (

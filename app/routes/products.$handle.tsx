@@ -1,6 +1,6 @@
 import { json, type LoaderFunctionArgs } from '@shopify/remix-oxygen';
-import { useLoaderData, type MetaFunction } from '@remix-run/react';
-import { useState } from 'react';
+import { useLoaderData, useFetcher, type MetaFunction } from '@remix-run/react';
+import { useState, useEffect } from 'react';
 import { PRODUCT_BY_HANDLE_QUERY, RECOMMENDED_PRODUCTS_QUERY } from '~/graphql/StorefrontQueries';
 import type { ProductDetailItem, ProductCardItem, ProductVariantNode } from '~/types/storefront.types';
 import { Breadcrumb } from '~/components/ui/Breadcrumb';
@@ -8,7 +8,7 @@ import { Button } from '~/components/ui/Button';
 import { Badge } from '~/components/ui/Badge';
 import { Accordion } from '~/components/ui/Accordion';
 import { ProductGrid } from '~/components/products/ProductGrid';
-import { Minus, Plus, ShoppingBag, ShieldCheck, Truck, RotateCcw } from 'lucide-react';
+import { Minus, Plus, ShoppingBag, ShieldCheck, Truck, RotateCcw, Zap } from 'lucide-react';
 import { clsx } from 'clsx';
 
 export const meta: MetaFunction<typeof loader> = ({ data }) => {
@@ -80,6 +80,7 @@ export default function ProductDetailRoute() {
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const [quantity, setQuantity] = useState(1);
   const [addingToCart, setAddingToCart] = useState(false);
+  const [isBuyingNow, setIsBuyingNow] = useState(false);
 
   const images = product.media?.nodes?.map((m) => m.image?.url).filter(Boolean) as string[] || [
     product.featuredImage?.url || '',
@@ -103,38 +104,66 @@ export default function ProductDetailRoute() {
     }).format(numeric);
   };
 
-  const handleAddToCart = async () => {
-    if (!selectedVariant?.id) return;
+  const cartFetcher = useFetcher<{ cart?: { checkoutUrl?: string; id?: string; totalQuantity?: number } }>();
+
+  useEffect(() => {
+    if (cartFetcher.state === 'idle' && cartFetcher.data) {
+      if (isBuyingNow) {
+        if (cartFetcher.data.cart?.checkoutUrl) {
+          window.location.href = cartFetcher.data.cart.checkoutUrl;
+        } else {
+          window.location.href = '/cart';
+        }
+      } else if (addingToCart) {
+        setAddingToCart(false);
+      }
+    }
+  }, [cartFetcher.state, cartFetcher.data, isBuyingNow, addingToCart]);
+
+  const handleAddToCart = () => {
+    if (!selectedVariant?.id || addingToCart || isBuyingNow) return;
     setAddingToCart(true);
 
-    try {
-      const formData = new FormData();
-      formData.append(
-        'cartFormInput',
-        JSON.stringify({
-          action: 'LinesAdd',
-          inputs: {
-            lines: [
-              {
-                merchandiseId: selectedVariant.id,
-                quantity,
-              },
-            ],
-          },
-        }),
-      );
+    const formData = new FormData();
+    formData.append(
+      'cartFormInput',
+      JSON.stringify({
+        action: 'LinesAdd',
+        inputs: {
+          lines: [
+            {
+              merchandiseId: selectedVariant.id,
+              quantity,
+            },
+          ],
+        },
+      }),
+    );
 
-      await fetch('/cart', {
-        method: 'POST',
-        body: formData,
-      });
+    cartFetcher.submit(formData, { method: 'POST', action: '/cart' });
+  };
 
-      window.location.href = '/cart';
-    } catch (error) {
-      console.error('Add to cart error:', error);
-    } finally {
-      setAddingToCart(false);
-    }
+  const handleBuyNow = () => {
+    if (!selectedVariant?.id || !isAvailable || isBuyingNow || addingToCart) return;
+    setIsBuyingNow(true);
+
+    const formData = new FormData();
+    formData.append(
+      'cartFormInput',
+      JSON.stringify({
+        action: 'LinesAdd',
+        inputs: {
+          lines: [
+            {
+              merchandiseId: selectedVariant.id,
+              quantity,
+            },
+          ],
+        },
+      }),
+    );
+
+    cartFetcher.submit(formData, { method: 'POST', action: '/cart' });
   };
 
   const productJsonLd = {
@@ -319,7 +348,7 @@ export default function ProductDetailRoute() {
             </div>
           )}
 
-          {/* Quantity & Add to Cart */}
+          {/* Quantity & Add to Cart / Buy Now */}
           <div className="flex flex-col gap-3 pt-2">
             <span className="text-xs font-semibold text-[#060505]">Quantity</span>
             <div className="flex items-center gap-4">
@@ -346,17 +375,32 @@ export default function ProductDetailRoute() {
               </div>
 
               <Button
-                variant="primary"
+                variant="outline"
                 size="lg"
-                className="flex-1 text-sm font-semibold flex items-center justify-center gap-2"
+                className="flex-1 text-sm font-semibold flex items-center justify-center gap-2 border-[#1a1a1a] text-[#1a1a1a] hover:bg-[#1a1a1a] hover:text-white transition-colors"
                 onClick={handleAddToCart}
-                disabled={!isAvailable}
+                disabled={!isAvailable || addingToCart || isBuyingNow}
                 isLoading={addingToCart}
               >
                 <ShoppingBag className="w-4 h-4" />
-                {isAvailable ? 'Add to Cart' : 'Sold Out'}
+                {isAvailable ? 'Add to Bag' : 'Sold Out'}
               </Button>
             </div>
+
+            {/* Express Buy Now Button */}
+            {isAvailable && (
+              <Button
+                variant="primary"
+                size="lg"
+                className="w-full text-sm font-semibold flex items-center justify-center gap-2 bg-[#c4622d] hover:bg-[#923f12] text-white shadow-sm"
+                onClick={handleBuyNow}
+                disabled={isBuyingNow || addingToCart}
+                isLoading={isBuyingNow}
+              >
+                <Zap className="w-4 h-4 fill-current" />
+                <span>Buy Now with CCAvenue</span>
+              </Button>
+            )}
           </div>
 
           {/* Trust Guarantees */}

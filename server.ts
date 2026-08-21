@@ -143,7 +143,38 @@ export default {
         }),
       });
 
-      const response = await handleRequest(request);
+      // Normalize host / x-forwarded-host headers for local loopback (localhost vs 127.0.0.1)
+      let req = request;
+      const origin = request.headers.get('origin');
+      const host = request.headers.get('host');
+      const forwardedHost = request.headers.get('x-forwarded-host');
+
+      if (origin && (host || forwardedHost)) {
+        try {
+          const originHost = new URL(origin).host;
+          const currentHost = forwardedHost || host;
+          if (
+            originHost !== currentHost &&
+            (originHost.includes('localhost') || originHost.includes('127.0.0.1')) &&
+            (currentHost?.includes('localhost') || currentHost?.includes('127.0.0.1'))
+          ) {
+            const headers = new Headers(request.headers);
+            headers.set('host', originHost);
+            headers.set('x-forwarded-host', originHost);
+            req = new Request(request.url, {
+              method: request.method,
+              headers,
+              body: request.body,
+              // @ts-ignore
+              duplex: 'half',
+            });
+          }
+        } catch {
+          // ignore invalid URLs
+        }
+      }
+
+      const response = await handleRequest(req);
 
       if (session.has('cartId') || session.has('customerAccessToken')) {
         response.headers.append('Set-Cookie', await session.commit());
