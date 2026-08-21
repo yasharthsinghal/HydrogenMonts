@@ -18,6 +18,7 @@ import { CartDrawer } from '~/components/cart/CartDrawer';
 
 export const links: LinksFunction = () => [
   { rel: 'stylesheet', href: appStyles },
+  { rel: 'icon', type: 'image/svg+xml', href: '/favicon.svg' },
   { rel: 'preconnect', href: 'https://cdn.shopify.com' },
   { rel: 'preconnect', href: 'https://fonts.googleapis.com' },
   { rel: 'preconnect', href: 'https://fonts.gstatic.com', crossOrigin: 'anonymous' },
