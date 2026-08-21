@@ -1,5 +1,5 @@
 import { json, type ActionFunctionArgs, type LoaderFunctionArgs } from '@shopify/remix-oxygen';
-import { useLoaderData, Link, type MetaFunction } from '@remix-run/react';
+import { useLoaderData, useFetcher, Link, type MetaFunction } from '@remix-run/react';
 import { CartItem } from '~/components/cart/CartItem';
 import { Breadcrumb } from '~/components/ui/Breadcrumb';
 import { EmptyState } from '~/components/ui/EmptyState';
@@ -71,10 +71,27 @@ export async function loader({ context }: LoaderFunctionArgs) {
 
 export default function CartRoute() {
   const { cart } = useLoaderData<typeof loader>() as { cart: any };
+  const fetcher = useFetcher();
+  const isMutating = fetcher.state !== 'idle';
 
-  const lines = cart?.lines?.nodes || [];
-  const subtotal = cart?.cost?.subtotalAmount?.amount ? parseFloat(cart.cost.subtotalAmount.amount) : 0;
-  const currencyCode = cart?.cost?.subtotalAmount?.currencyCode || 'INR';
+  const lines =
+    cart?.lines?.nodes ||
+    (cart?.lines?.edges ? cart.lines.edges.map((e: any) => e.node) : null) ||
+    (Array.isArray(cart?.lines) ? cart.lines : []);
+
+  const subtotal = cart?.cost?.subtotalAmount?.amount
+    ? parseFloat(cart.cost.subtotalAmount.amount)
+    : cart?.cost?.totalAmount?.amount
+    ? parseFloat(cart.cost.totalAmount.amount)
+    : lines.reduce((sum: number, line: any) => {
+        const p = parseFloat(line?.cost?.totalAmount?.amount || line?.merchandise?.price?.amount || 0);
+        return sum + (isNaN(p) ? 0 : p);
+      }, 0);
+
+  const currencyCode =
+    cart?.cost?.subtotalAmount?.currencyCode ||
+    cart?.cost?.totalAmount?.currencyCode ||
+    'INR';
 
   const formatPrice = (amount: number, currency: string) => {
     return new Intl.NumberFormat('en-IN', {
@@ -84,27 +101,28 @@ export default function CartRoute() {
     }).format(amount);
   };
 
-  const handleUpdateQuantity = async (lineId: string, quantity: number) => {
-    const formData = new FormData();
+  const handleUpdateQuantity = (lineId: string, quantity: number) => {
     if (quantity === 0) {
-      formData.append(
-        'cartFormInput',
-        JSON.stringify({
-          action: 'LinesRemove',
-          inputs: { lineIds: [lineId] },
-        }),
+      fetcher.submit(
+        {
+          cartFormInput: JSON.stringify({
+            action: 'LinesRemove',
+            inputs: { lineIds: [lineId] },
+          }),
+        },
+        { method: 'POST', action: '/cart' },
       );
     } else {
-      formData.append(
-        'cartFormInput',
-        JSON.stringify({
-          action: 'LinesUpdate',
-          inputs: { lines: [{ id: lineId, quantity }] },
-        }),
+      fetcher.submit(
+        {
+          cartFormInput: JSON.stringify({
+            action: 'LinesUpdate',
+            inputs: { lines: [{ id: lineId, quantity }] },
+          }),
+        },
+        { method: 'POST', action: '/cart' },
       );
     }
-    await fetch('/cart', { method: 'POST', body: formData });
-    window.location.reload();
   };
 
   return (

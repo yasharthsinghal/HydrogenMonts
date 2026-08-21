@@ -1,14 +1,30 @@
-import React from 'react';
-import { NavLink } from '@remix-run/react';
+import React, { useState } from 'react';
+import { NavLink, Link } from '@remix-run/react';
 import { clsx } from 'clsx';
+import { ChevronDown } from 'lucide-react';
+
+export interface NavSubItem {
+  label: string;
+  href: string;
+  description?: string;
+}
 
 export interface NavItem {
   label: string;
   href: string;
+  children?: NavSubItem[];
 }
 
 export const NAV_ITEMS: NavItem[] = [
-  { label: 'Shop All', href: '/collections/all' },
+  {
+    label: 'Shop',
+    href: '/collections/all',
+    children: [
+      { label: 'All Products', href: '/collections/all', description: 'Explore our complete handcrafted catalog' },
+      { label: 'Curated Series', href: '/collections', description: 'Hand-block prints & artisanal series' },
+      { label: 'Ready-to-Wear', href: '/collections/all', description: 'Limited batch luxury silhouettes' },
+    ],
+  },
   { label: 'Collections', href: '/collections' },
   { label: 'About Us', href: '/about' },
   { label: 'Contact', href: '/contact' },
@@ -16,6 +32,8 @@ export const NAV_ITEMS: NavItem[] = [
 ];
 
 export const Navigation: React.FC = () => {
+  const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
+
   return (
     <nav
       className="hidden md:flex items-center gap-8"
@@ -46,3 +64,4 @@ export const Navigation: React.FC = () => {
     </nav>
   );
 };
+

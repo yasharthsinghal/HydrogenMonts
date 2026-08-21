@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from 'react';
-import { Link } from '@remix-run/react';
+import React, { useEffect } from 'react';
+import { Link, useFetcher } from '@remix-run/react';
 import { X, ShoppingBag, ArrowRight } from 'lucide-react';
 import { CartItem } from './CartItem';
 import { EmptyState } from '~/components/ui/EmptyState';
@@ -33,7 +33,8 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
   onClose,
   cart,
 }) => {
-  const [isMutating, setIsMutating] = useState(false);
+  const fetcher = useFetcher();
+  const isMutating = fetcher.state !== 'idle';
 
   useEffect(() => {
     if (isOpen) {
@@ -48,9 +49,24 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
 
   if (!isOpen) return null;
 
-  const lines = cart?.lines?.nodes || [];
-  const subtotal = cart?.cost?.subtotalAmount?.amount ? parseFloat(cart.cost.subtotalAmount.amount) : 0;
-  const currencyCode = cart?.cost?.subtotalAmount?.currencyCode || 'INR';
+  const lines =
+    cart?.lines?.nodes ||
+    (cart?.lines?.edges ? cart.lines.edges.map((e: any) => e.node) : null) ||
+    (Array.isArray(cart?.lines) ? cart.lines : []);
+
+  const subtotal = cart?.cost?.subtotalAmount?.amount
+    ? parseFloat(cart.cost.subtotalAmount.amount)
+    : cart?.cost?.totalAmount?.amount
+    ? parseFloat(cart.cost.totalAmount.amount)
+    : lines.reduce((sum: number, line: any) => {
+        const p = parseFloat(line?.cost?.totalAmount?.amount || line?.merchandise?.price?.amount || 0);
+        return sum + (isNaN(p) ? 0 : p);
+      }, 0);
+
+  const currencyCode =
+    cart?.cost?.subtotalAmount?.currencyCode ||
+    cart?.cost?.totalAmount?.currencyCode ||
+    'INR';
   const freeShippingThreshold = 999;
   const progressPercent = Math.min(100, Math.round((subtotal / freeShippingThreshold) * 100));
   const remainingForFreeShipping = Math.max(0, freeShippingThreshold - subtotal);
@@ -63,38 +79,32 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
     }).format(amount);
   };
 
-  const handleUpdateQuantity = async (lineId: string, quantity: number) => {
-    setIsMutating(true);
-    try {
-      const formData = new FormData();
-      if (quantity === 0) {
-        formData.append(
-          'cartFormInput',
-          JSON.stringify({
+  const handleUpdateQuantity = (lineId: string, quantity: number) => {
+    if (quantity === 0) {
+      fetcher.submit(
+        {
+          cartFormInput: JSON.stringify({
             action: 'LinesRemove',
             inputs: { lineIds: [lineId] },
           }),
-        );
-      } else {
-        formData.append(
-          'cartFormInput',
-          JSON.stringify({
+        },
+        { method: 'POST', action: '/cart' },
+      );
+    } else {
+      fetcher.submit(
+        {
+          cartFormInput: JSON.stringify({
             action: 'LinesUpdate',
             inputs: { lines: [{ id: lineId, quantity }] },
           }),
-        );
-      }
-      await fetch('/cart', { method: 'POST', body: formData });
-      window.location.reload();
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setIsMutating(false);
+        },
+        { method: 'POST', action: '/cart' },
+      );
     }
   };
 
-  const handleRemoveLine = async (lineId: string) => {
-    await handleUpdateQuantity(lineId, 0);
+  const handleRemoveLine = (lineId: string) => {
+    handleUpdateQuantity(lineId, 0);
   };
 
   return (
