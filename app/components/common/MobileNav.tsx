@@ -52,17 +52,45 @@ export const MobileNav: React.FC<MobileNavProps> = ({ isOpen, onClose }) => {
 
           {/* Nav Links */}
           <nav className="p-5 flex flex-col divide-y divide-[#e8e4df]">
-            {NAV_ITEMS.map((item) => (
-              <Link
-                key={item.href}
-                to={item.href}
-                onClick={onClose}
-                className="py-3.5 flex items-center justify-between text-sm font-semibold uppercase tracking-wider text-[#1a1a1a] hover:text-[#c4622d] transition-colors"
-              >
-                <span>{item.label}</span>
-                <ChevronRight className="w-4 h-4 text-[#afaba6]" />
-              </Link>
-            ))}
+            {NAV_ITEMS.map((item) => {
+              const hasChildren = Boolean(item.children && item.children.length > 0);
+
+              if (hasChildren) {
+                return (
+                  <div key={item.label} className="py-2 flex flex-col">
+                    <div className="flex items-center justify-between py-2 text-sm font-semibold uppercase tracking-wider text-[#1a1a1a]">
+                      <Link to={item.href} onClick={onClose} className="hover:text-[#c4622d] transition-colors">
+                        {item.label}
+                      </Link>
+                    </div>
+                    <div className="pl-3 pb-1 flex flex-col gap-2 border-l-2 border-[#e8e4df] ml-1 mt-1">
+                      {item.children?.map((subItem) => (
+                        <Link
+                          key={subItem.label}
+                          to={subItem.href}
+                          onClick={onClose}
+                          className="py-1 text-xs text-[#686764] hover:text-[#c4622d] transition-colors"
+                        >
+                          {subItem.label}
+                        </Link>
+                      ))}
+                    </div>
+                  </div>
+                );
+              }
+
+              return (
+                <Link
+                  key={item.href}
+                  to={item.href}
+                  onClick={onClose}
+                  className="py-3.5 flex items-center justify-between text-sm font-semibold uppercase tracking-wider text-[#1a1a1a] hover:text-[#c4622d] transition-colors"
+                >
+                  <span>{item.label}</span>
+                  <ChevronRight className="w-4 h-4 text-[#afaba6]" />
+                </Link>
+              );
+            })}
           </nav>
         </div>
 

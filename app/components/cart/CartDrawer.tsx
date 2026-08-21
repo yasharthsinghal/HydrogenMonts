@@ -13,18 +13,19 @@ export interface CartDrawerProps {
     totalQuantity?: number;
     checkoutUrl?: string;
     cost?: {
-      subtotalAmount: {
+      subtotalAmount?: {
         amount: string;
         currencyCode: string;
       };
-      totalAmount: {
+      totalAmount?: {
         amount: string;
         currencyCode: string;
       };
     };
     lines?: {
-      nodes: any[];
-    };
+      nodes?: any[];
+      edges?: any[];
+    } | any[];
   } | null;
 }
 
@@ -33,8 +34,9 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
   onClose,
   cart,
 }) => {
-  const cartFetcher = useFetcher();
-  const isMutating = cartFetcher.state !== 'idle';
+  const fetcher = useFetcher();
+  const isMutating = fetcher.state !== 'idle';
+  const [isRedirecting, setIsRedirecting] = useState(false);
 
   useEffect(() => {
     if (isOpen) {
@@ -49,9 +51,26 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
 
   if (!isOpen) return null;
 
-  const lines = cart?.lines?.nodes || [];
-  const subtotal = cart?.cost?.subtotalAmount?.amount ? parseFloat(cart.cost.subtotalAmount.amount) : 0;
-  const currencyCode = cart?.cost?.subtotalAmount?.currencyCode || 'INR';
+  const rawLines: any = cart?.lines;
+  const lines: any[] =
+    rawLines?.nodes ||
+    (rawLines?.edges ? rawLines.edges.map((e: any) => e.node) : null) ||
+    (Array.isArray(rawLines) ? rawLines : []);
+
+  const subtotal = cart?.cost?.subtotalAmount?.amount
+    ? parseFloat(cart.cost.subtotalAmount.amount)
+    : cart?.cost?.totalAmount?.amount
+    ? parseFloat(cart.cost.totalAmount.amount)
+    : lines.reduce((sum: number, line: any) => {
+        const p = parseFloat(line?.cost?.totalAmount?.amount || line?.merchandise?.price?.amount || 0);
+        return sum + (isNaN(p) ? 0 : p);
+      }, 0);
+
+  const currencyCode =
+    cart?.cost?.subtotalAmount?.currencyCode ||
+    cart?.cost?.totalAmount?.currencyCode ||
+    'INR';
+
   const freeShippingThreshold = 999;
   const progressPercent = Math.min(100, Math.round((subtotal / freeShippingThreshold) * 100));
   const remainingForFreeShipping = Math.max(0, freeShippingThreshold - subtotal);
@@ -65,32 +84,32 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
   };
 
   const handleUpdateQuantity = (lineId: string, quantity: number) => {
-    const formData = new FormData();
     if (quantity === 0) {
-      formData.append(
-        'cartFormInput',
-        JSON.stringify({
-          action: 'LinesRemove',
-          inputs: { lineIds: [lineId] },
-        }),
+      fetcher.submit(
+        {
+          cartFormInput: JSON.stringify({
+            action: 'LinesRemove',
+            inputs: { lineIds: [lineId] },
+          }),
+        },
+        { method: 'POST', action: '/cart' },
       );
     } else {
-      formData.append(
-        'cartFormInput',
-        JSON.stringify({
-          action: 'LinesUpdate',
-          inputs: { lines: [{ id: lineId, quantity }] },
-        }),
+      fetcher.submit(
+        {
+          cartFormInput: JSON.stringify({
+            action: 'LinesUpdate',
+            inputs: { lines: [{ id: lineId, quantity }] },
+          }),
+        },
+        { method: 'POST', action: '/cart' },
       );
     }
-    cartFetcher.submit(formData, { method: 'POST', action: '/cart' });
   };
 
   const handleRemoveLine = (lineId: string) => {
     handleUpdateQuantity(lineId, 0);
   };
-
-  const [isRedirecting, setIsRedirecting] = useState(false);
 
   const handleCheckout = (e: React.MouseEvent<HTMLAnchorElement>) => {
     if (!cart?.checkoutUrl || isRedirecting) return;
@@ -166,7 +185,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
             />
           ) : (
             <div className="flex flex-col">
-              {lines.map((line) => (
+              {lines.map((line: any) => (
                 <CartItem
                   key={line.id}
                   line={line}

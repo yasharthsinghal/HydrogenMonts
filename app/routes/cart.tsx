@@ -6,6 +6,7 @@ import { Breadcrumb } from '~/components/ui/Breadcrumb';
 import { EmptyState } from '~/components/ui/EmptyState';
 import { Button } from '~/components/ui/Button';
 import { ShoppingBag, ArrowRight } from 'lucide-react';
+import { logger } from '~/utils/logger.server';
 
 export const meta: MetaFunction = () => {
   return [
@@ -13,8 +14,6 @@ export const meta: MetaFunction = () => {
     { name: 'description', content: 'Review your handcrafted MONTS items and proceed to checkout.' },
   ];
 };
-
-import { logger } from '~/utils/logger.server';
 
 export async function action({ request, context }: ActionFunctionArgs) {
   const { cart } = context;
@@ -73,10 +72,27 @@ export async function loader({ context }: LoaderFunctionArgs) {
 export default function CartRoute() {
   const { cart } = useLoaderData<typeof loader>() as { cart: any };
   const [isRedirecting, setIsRedirecting] = useState(false);
+  const fetcher = useFetcher();
+  const isMutating = fetcher.state !== 'idle';
 
-  const lines = cart?.lines?.nodes || [];
-  const subtotal = cart?.cost?.subtotalAmount?.amount ? parseFloat(cart.cost.subtotalAmount.amount) : 0;
-  const currencyCode = cart?.cost?.subtotalAmount?.currencyCode || 'INR';
+  const lines =
+    cart?.lines?.nodes ||
+    (cart?.lines?.edges ? cart.lines.edges.map((e: any) => e.node) : null) ||
+    (Array.isArray(cart?.lines) ? cart.lines : []);
+
+  const subtotal = cart?.cost?.subtotalAmount?.amount
+    ? parseFloat(cart.cost.subtotalAmount.amount)
+    : cart?.cost?.totalAmount?.amount
+    ? parseFloat(cart.cost.totalAmount.amount)
+    : lines.reduce((sum: number, line: any) => {
+        const p = parseFloat(line?.cost?.totalAmount?.amount || line?.merchandise?.price?.amount || 0);
+        return sum + (isNaN(p) ? 0 : p);
+      }, 0);
+
+  const currencyCode =
+    cart?.cost?.subtotalAmount?.currencyCode ||
+    cart?.cost?.totalAmount?.currencyCode ||
+    'INR';
 
   const formatPrice = (amount: number, currency: string) => {
     return new Intl.NumberFormat('en-IN', {
@@ -91,29 +107,28 @@ export default function CartRoute() {
     setIsRedirecting(true);
   };
 
-  const cartFetcher = useFetcher();
-  const isMutating = cartFetcher.state !== 'idle';
-
   const handleUpdateQuantity = (lineId: string, quantity: number) => {
-    const formData = new FormData();
     if (quantity === 0) {
-      formData.append(
-        'cartFormInput',
-        JSON.stringify({
-          action: 'LinesRemove',
-          inputs: { lineIds: [lineId] },
-        }),
+      fetcher.submit(
+        {
+          cartFormInput: JSON.stringify({
+            action: 'LinesRemove',
+            inputs: { lineIds: [lineId] },
+          }),
+        },
+        { method: 'POST', action: '/cart' },
       );
     } else {
-      formData.append(
-        'cartFormInput',
-        JSON.stringify({
-          action: 'LinesUpdate',
-          inputs: { lines: [{ id: lineId, quantity }] },
-        }),
+      fetcher.submit(
+        {
+          cartFormInput: JSON.stringify({
+            action: 'LinesUpdate',
+            inputs: { lines: [{ id: lineId, quantity }] },
+          }),
+        },
+        { method: 'POST', action: '/cart' },
       );
     }
-    cartFetcher.submit(formData, { method: 'POST', action: '/cart' });
   };
 
   return (
