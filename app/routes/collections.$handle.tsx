@@ -1,6 +1,6 @@
 import { json, type LoaderFunctionArgs } from '@shopify/remix-oxygen';
 import { useLoaderData, useNavigate, useLocation, type MetaFunction } from '@remix-run/react';
-import { COLLECTION_BY_HANDLE_QUERY } from '~/graphql/StorefrontQueries';
+import { COLLECTION_BY_HANDLE_QUERY, ALL_PRODUCTS_QUERY } from '~/graphql/StorefrontQueries';
 import type { ProductCardItem } from '~/types/storefront.types';
 import { Breadcrumb } from '~/components/ui/Breadcrumb';
 import { ProductGrid } from '~/components/products/ProductGrid';
@@ -32,6 +32,67 @@ export async function loader({ params, request, context }: LoaderFunctionArgs) {
 
   const sort = url.searchParams.get('sort') || 'best-selling';
 
+  // Handle virtual "all" products catalog
+  if (handle === 'all') {
+    let allSortKey: any = 'BEST_SELLING';
+    let reverse = false;
+
+    switch (sort) {
+      case 'price-asc':
+        allSortKey = 'PRICE';
+        reverse = false;
+        break;
+      case 'price-desc':
+        allSortKey = 'PRICE';
+        reverse = true;
+        break;
+      case 'created-desc':
+        allSortKey = 'CREATED_AT';
+        reverse = true;
+        break;
+      case 'title-asc':
+        allSortKey = 'TITLE';
+        reverse = false;
+        break;
+      default:
+        allSortKey = 'BEST_SELLING';
+        reverse = false;
+    }
+
+    try {
+      const data = await storefront.query(ALL_PRODUCTS_QUERY, {
+        variables: {
+          first: 24,
+          sortKey: allSortKey,
+          reverse,
+        },
+        cache: storefront.CacheShort(),
+      });
+
+      const products = (data?.products?.nodes || []) as ProductCardItem[];
+
+      const collection = {
+        id: 'all-products',
+        title: 'All Products',
+        handle: 'all',
+        description: 'Explore our complete collection of artisanal handcrafted garments and accessories.',
+        descriptionHtml: '<p>Explore our complete collection of artisanal handcrafted garments and accessories.</p>',
+        image: null,
+      };
+
+      return json({
+        collection,
+        products,
+        currentSort: sort,
+        canonicalUrl,
+      });
+    } catch (error) {
+      console.error('All products query error:', error);
+      throw new Response('Error loading products', { status: 500 });
+    }
+  }
+
+  // Handle standard Shopify collections
   let sortKey: any = 'BEST_SELLING';
   let reverse = false;
 
@@ -103,7 +164,7 @@ export default function CollectionDetailRoute() {
     description: collection.description,
     url: canonicalUrl,
     numberOfItems: products.length,
-    itemListElement: products.map((prod, idx) => ({
+    itemListElement: products.map((prod: any, idx: number) => ({
       '@type': 'ListItem',
       position: idx + 1,
       name: prod.title,
@@ -133,7 +194,7 @@ export default function CollectionDetailRoute() {
           className="text-xs uppercase tracking-[0.25em] font-semibold text-[#8b7355] block mb-2"
           style={{ fontFamily: "'DM Sans', sans-serif" }}
         >
-          Curated Series
+          {collection.handle === 'all' ? 'Complete Catalog' : 'Curated Series'}
         </span>
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
           <div>

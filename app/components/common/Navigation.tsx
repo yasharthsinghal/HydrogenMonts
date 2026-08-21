@@ -25,6 +25,7 @@ export const Navigation: React.FC = () => {
         <NavLink
           key={item.href}
           to={item.href}
+          end
           className={({ isActive }) =>
             clsx(
               'text-xs font-semibold uppercase tracking-[0.15em] transition-colors relative py-1 hover:text-[#c4622d]',

@@ -55,6 +55,37 @@ export const COLLECTIONS_QUERY = `#graphql
   ${IMAGE_FRAGMENT}
 ` as const;
 
+export const ALL_PRODUCTS_QUERY = `#graphql
+  query AllProducts(
+    $country: CountryCode
+    $language: LanguageCode
+    $first: Int = 24
+    $after: String
+    $sortKey: ProductSortKeys = BEST_SELLING
+    $reverse: Boolean = false
+  ) @inContext(country: $country, language: $language) {
+    products(
+      first: $first
+      after: $after
+      sortKey: $sortKey
+      reverse: $reverse
+    ) {
+      pageInfo {
+        hasNextPage
+        hasPreviousPage
+        endCursor
+        startCursor
+      }
+      nodes {
+        ...ProductCardFragment
+      }
+    }
+  }
+  ${PRODUCT_CARD_FRAGMENT}
+  ${IMAGE_FRAGMENT}
+  ${MONEY_FRAGMENT}
+` as const;
+
 export const COLLECTION_BY_HANDLE_QUERY = `#graphql
   query CollectionByHandle(
     $handle: String!
