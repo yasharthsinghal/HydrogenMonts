@@ -152,23 +152,15 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
             </button>
           </div>
 
-          {/* Free Shipping Bar */}
-          <div className="p-4 bg-[#f5f0e8] border-b border-[#e8e4df]">
-            <p className="text-xs text-[#2c2c2c] mb-2 font-medium">
-              {remainingForFreeShipping > 0 ? (
-                <>
-                  Add <span className="font-bold text-[#c4622d]">{formatPrice(remainingForFreeShipping, currencyCode)}</span> more for <span className="font-bold">Free Shipping</span>!
-                </>
-              ) : (
-                <span className="font-bold text-[#8b7355]">You have unlocked Free Shipping!</span>
-              )}
-            </p>
-            <div className="w-full h-1.5 bg-[#e8dfd5] rounded-full overflow-hidden">
-              <div
-                className="h-full bg-[#c4622d] transition-all duration-300 rounded-full"
-                style={{ width: `${progressPercent}%` }}
-              />
+          {/* Policy Banner */}
+          <div className="p-3.5 bg-[#f5f0e8] border-b border-[#e8e4df] flex flex-col gap-1 text-xs">
+            <div className="flex items-center justify-between font-semibold text-[#060505]">
+              <span>🇮🇳 Free Shipping across India</span>
+              <span className="text-[#8b7355] text-[11px]">Prepaid & COD</span>
             </div>
+            <span className="text-[11px] text-[#686764]">
+              ✈️ Worldwide delivery (US, UK, SG, JP, UAE) calculated at actuals.
+            </span>
           </div>
         </div>
 
@@ -207,6 +199,17 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
                 {formatPrice(subtotal, currencyCode)}
               </span>
             </div>
+
+            {/* Prepaid Savings Indicator */}
+            <div className="flex items-center justify-between p-2.5 bg-[#faf8f5] rounded-[4px] border border-[#c4622d]/25 text-xs">
+              <span className="text-[#060505] font-medium flex items-center gap-1.5">
+                <span className="text-[#c4622d] font-bold">⚡ Prepaid Offer:</span> 15% Off
+              </span>
+              <span className="text-[#c4622d] font-bold">
+                Save {formatPrice(subtotal * 0.15, currencyCode)}
+              </span>
+            </div>
+
             <p className="text-[11px] text-[#686764]">
               Shipping and taxes calculated at checkout.
             </p>

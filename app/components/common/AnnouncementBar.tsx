@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 
 const ANNOUNCEMENTS = [
-  'Vastra by Monty is now MONTS — Same handcrafted quality, elevated experience.',
-  'Free Shipping Across India | Extra 15% Off on Prepaid Orders',
+  '⚡ Extra 15% Instant Discount on all Prepaid Orders (UPI & Cards)',
+  '🇮🇳 Free Domestic Shipping Across India on All Orders (Prepaid & COD)',
+  '✈️ Worldwide Express Shipping to USA, UK, Singapore, Japan & Dubai (at actuals)',
+  'Vastra by Monty is now MONTS — Same artisanal quality, elevated experience.',
 ];
 
 export const AnnouncementBar: React.FC = () => {

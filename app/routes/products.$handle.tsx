@@ -238,13 +238,19 @@ export default function ProductDetailRoute() {
         },
         {
             id: "shipping",
-            title: "Shipping & Easy Returns",
+            title: "Shipping & Global Delivery Policy",
             content: (
-                <p>
-                    Complimentary domestic shipping across India on orders above
-                    Rs. 999. Dispatched within 24–48 hours. Returns and
-                    exchanges welcomed within 30 days of delivery.
-                </p>
+                <div className="flex flex-col gap-2 text-xs text-[#686764] leading-relaxed">
+                    <p>
+                        <strong className="text-[#060505]">🇮🇳 Domestic (India):</strong> Complimentary <strong>Free Shipping</strong> on all domestic orders across India (both Prepaid & COD). Dispatched within 24–48 hours.
+                    </p>
+                    <p>
+                        <strong className="text-[#060505]">✈️ Worldwide (US, UK, SG, JP, UAE):</strong> International express delivery charged strictly at actuals based on weight and destination at checkout.
+                    </p>
+                    <p>
+                        <strong className="text-[#060505]">⚡ Prepaid Offer:</strong> Instant extra 15% discount applied at checkout on all online prepaid payments.
+                    </p>
+                </div>
             ),
         },
     ];
@@ -345,6 +351,26 @@ export default function ProductDetailRoute() {
                         <span className='text-xs text-[#686764] block mt-1'>
                             Taxes included. Handcrafted in limited batches.
                         </span>
+
+                        {/* Prepaid 15% Instant Savings Callout */}
+                        <div className='mt-3 p-3 bg-[#faf8f5] border border-[#c4622d]/30 rounded-[6px] flex items-center justify-between gap-3'>
+                            <div className='flex items-center gap-2.5'>
+                                <span className='flex items-center justify-center w-6 h-6 rounded-full bg-[#c4622d] text-white text-[11px] font-bold shrink-0'>
+                                    %
+                                </span>
+                                <div className='flex flex-col'>
+                                    <span className='text-xs font-bold text-[#060505]'>
+                                        Extra 15% Instant Discount
+                                    </span>
+                                    <span className='text-[11px] text-[#686764]'>
+                                        Auto-applied at checkout on all Prepaid orders (UPI / Cards)
+                                    </span>
+                                </div>
+                            </div>
+                            <span className='text-xs font-bold text-[#c4622d] whitespace-nowrap'>
+                                Save {formatPrice((parseFloat(price.amount) * 0.15).toFixed(0), price.currencyCode)}
+                            </span>
+                        </div>
                     </div>
 
                     {/* Variant Selector */}

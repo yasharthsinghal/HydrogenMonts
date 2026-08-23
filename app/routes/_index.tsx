@@ -10,6 +10,7 @@ import {
   RotateCcw,
   Globe,
   Headphones,
+  Truck,
 } from 'lucide-react';
 
 export const meta: MetaFunction = () => {
@@ -409,19 +410,37 @@ export default function IndexRoute() {
         <div className="max-w-[1400px] mx-auto px-6 md:px-12 grid grid-cols-1 md:grid-cols-3 gap-10 text-center">
           <div className="flex flex-col items-center gap-3">
             <div className="w-12 h-12 flex items-center justify-center rounded-full bg-[#c4622d]/10 text-[#c4622d]">
-              <RotateCcw className="w-6 h-6" />
+              <Truck className="w-6 h-6" />
             </div>
             <h4
               className="text-base font-bold text-[#060505]"
               style={{ fontFamily: "'Playfair Display', serif" }}
             >
-              Free returns
+              Free Domestic Shipping
             </h4>
             <p
               className="text-sm text-[#686764]"
               style={{ fontFamily: "'Cormorant', serif", fontSize: '1.1rem' }}
             >
-              Returns within 30 days receive a full refund.
+              Complimentary insured shipping on all orders across India (Prepaid & COD).
+            </p>
+          </div>
+
+          <div className="flex flex-col items-center gap-3">
+            <div className="w-12 h-12 flex items-center justify-center rounded-full bg-[#c4622d]/10 text-[#c4622d]">
+              <Sparkles className="w-6 h-6" />
+            </div>
+            <h4
+              className="text-base font-bold text-[#060505]"
+              style={{ fontFamily: "'Playfair Display', serif" }}
+            >
+              Extra 15% Prepaid Discount
+            </h4>
+            <p
+              className="text-sm text-[#686764]"
+              style={{ fontFamily: "'Cormorant', serif", fontSize: '1.1rem' }}
+            >
+              Automatic 15% discount applied at checkout on all online prepaid payments.
             </p>
           </div>
 
@@ -433,31 +452,13 @@ export default function IndexRoute() {
               className="text-base font-bold text-[#060505]"
               style={{ fontFamily: "'Playfair Display', serif" }}
             >
-              Worldwide shipping
+              Global Express Delivery
             </h4>
             <p
               className="text-sm text-[#686764]"
               style={{ fontFamily: "'Cormorant', serif", fontSize: '1.1rem' }}
             >
-              Ship anywhere, rates available at checkout.
-            </p>
-          </div>
-
-          <div className="flex flex-col items-center gap-3">
-            <div className="w-12 h-12 flex items-center justify-center rounded-full bg-[#c4622d]/10 text-[#c4622d]">
-              <Headphones className="w-6 h-6" />
-            </div>
-            <h4
-              className="text-base font-bold text-[#060505]"
-              style={{ fontFamily: "'Playfair Display', serif" }}
-            >
-              24/7 support
-            </h4>
-            <p
-              className="text-sm text-[#686764]"
-              style={{ fontFamily: "'Cormorant', serif", fontSize: '1.1rem' }}
-            >
-              Contact our concierge team anytime for assistance.
+              Express transit to USA, UK, Singapore, Japan & Dubai calculated strictly at actuals.
             </p>
           </div>
         </div>

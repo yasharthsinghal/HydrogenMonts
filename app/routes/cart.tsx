@@ -177,13 +177,33 @@ export default function CartRoute() {
                 <span>{cart?.totalQuantity || 0}</span>
               </div>
               <div className="flex justify-between text-[#686764]">
-                <span>Shipping</span>
-                <span className="text-[#8b7355] font-medium">Calculated at checkout</span>
+                <span>Domestic Shipping (India)</span>
+                <span className="text-[#8b7355] font-semibold">FREE</span>
+              </div>
+              <div className="flex justify-between text-[#686764] text-xs">
+                <span>International Shipping</span>
+                <span>Actuals at checkout</span>
               </div>
               <div className="flex justify-between text-base font-bold text-[#060505] pt-3 border-t border-[#e8e4df]">
                 <span>Subtotal</span>
                 <span>{formatPrice(subtotal, currencyCode)}</span>
               </div>
+            </div>
+
+            {/* Prepaid 15% Discount Card */}
+            <div className="p-3 bg-[#faf8f5] border border-[#c4622d]/30 rounded-[6px] flex items-center justify-between gap-3 text-xs">
+              <div className="flex items-center gap-2">
+                <span className="flex items-center justify-center w-5 h-5 rounded-full bg-[#c4622d] text-white text-[10px] font-bold shrink-0">
+                  %
+                </span>
+                <div className="flex flex-col">
+                  <span className="font-bold text-[#060505]">Extra 15% Prepaid Discount</span>
+                  <span className="text-[11px] text-[#686764]">Auto-applied on CCAvenue / UPI</span>
+                </div>
+              </div>
+              <span className="font-bold text-[#c4622d] whitespace-nowrap">
+                - {formatPrice(subtotal * 0.15, currencyCode)}
+              </span>
             </div>
 
             {cart?.checkoutUrl ? (
