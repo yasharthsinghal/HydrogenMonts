@@ -1,5 +1,4 @@
-import { json, type LoaderFunctionArgs } from '@shopify/remix-oxygen';
-import { useLoaderData, Form, type MetaFunction } from '@remix-run/react';
+import { useLoaderData, Form, type MetaFunction, type LoaderFunctionArgs } from 'react-router';
 import { SEARCH_QUERY } from '~/graphql/StorefrontQueries';
 import type { ProductCardItem } from '~/types/storefront.types';
 import { Breadcrumb } from '~/components/ui/Breadcrumb';
@@ -33,11 +32,11 @@ export async function loader({ request, context }: LoaderFunctionArgs) {
     }
   }
 
-  return json({
+  return {
     query,
     products,
     totalCount,
-  });
+  };
 }
 
 export default function SearchRoute() {

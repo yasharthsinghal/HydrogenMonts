@@ -1,5 +1,5 @@
 import React from 'react';
-import { type MetaFunction } from '@remix-run/react';
+import { type MetaFunction } from 'react-router';
 import { Breadcrumb } from '~/components/ui/Breadcrumb';
 import { Accordion } from '~/components/ui/Accordion';
 

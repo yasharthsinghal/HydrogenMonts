@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Link, useFetcher } from '@remix-run/react';
+import { Link, useFetcher } from 'react-router';
 import { X, ShoppingBag, ArrowRight } from 'lucide-react';
 import { CartItem } from './CartItem';
 import { EmptyState } from '~/components/ui/EmptyState';

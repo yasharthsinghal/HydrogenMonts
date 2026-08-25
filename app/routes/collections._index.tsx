@@ -1,5 +1,4 @@
-import { json, type LoaderFunctionArgs } from '@shopify/remix-oxygen';
-import { useLoaderData, Link, type MetaFunction } from '@remix-run/react';
+import { useLoaderData, Link, type MetaFunction, type LoaderFunctionArgs } from 'react-router';
 import { COLLECTIONS_QUERY } from '~/graphql/StorefrontQueries';
 import type { CollectionCardItem } from '~/types/storefront.types';
 import { Breadcrumb } from '~/components/ui/Breadcrumb';
@@ -30,7 +29,7 @@ export async function loader({ context }: LoaderFunctionArgs) {
     console.error('Collections query error:', error);
   }
 
-  return json({ collections });
+  return { collections };
 }
 
 export default function CollectionsIndexRoute() {

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Link } from '@remix-run/react';
+import { Link } from 'react-router';
 import { Mail, CheckCircle2, Phone, MapPin } from 'lucide-react';
 
 export const Footer: React.FC = () => {

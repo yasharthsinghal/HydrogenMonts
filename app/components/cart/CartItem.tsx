@@ -1,5 +1,5 @@
 import React from 'react';
-import { Link } from '@remix-run/react';
+import { Link } from 'react-router';
 import { Minus, Plus, Trash2 } from 'lucide-react';
 
 export interface CartLineItemProps {

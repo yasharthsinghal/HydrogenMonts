@@ -1,5 +1,4 @@
-import { json, type LoaderFunctionArgs } from "@shopify/remix-oxygen";
-import { useLoaderData, useFetcher, useNavigate, type MetaFunction } from "@remix-run/react";
+import { useLoaderData, useFetcher, useNavigate, type MetaFunction, type LoaderFunctionArgs } from "react-router";
 import { useState, useEffect } from "react";
 import {
     PRODUCT_BY_HANDLE_QUERY,
@@ -79,11 +78,11 @@ export async function loader({ params, request, context }: LoaderFunctionArgs) {
         throw new Response("Product Not Found", { status: 404 });
     }
 
-    return json({
+    return {
         product,
         recommendedProducts,
         canonicalUrl,
-    });
+    };
 }
 
 export default function ProductDetailRoute() {

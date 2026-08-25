@@ -1,16 +1,14 @@
 import {
-  json,
+  data,
   redirect,
-  type ActionFunctionArgs,
-  type LoaderFunctionArgs,
-} from '@shopify/remix-oxygen';
-import {
   Form,
   useActionData,
   useNavigation,
   useSearchParams,
   type MetaFunction,
-} from '@remix-run/react';
+  type ActionFunctionArgs,
+  type LoaderFunctionArgs,
+} from 'react-router';
 import { useState, useEffect } from 'react';
 import { Button } from '~/components/ui/Button';
 import { Input } from '~/components/ui/Input';
@@ -53,11 +51,11 @@ export async function loader({ context, request }: LoaderFunctionArgs) {
   }
 
   const otpData = session.get('otpData') as OtpSessionData | undefined;
-  return json({
+  return {
     returnTo,
     hasActiveOtp: Boolean(otpData && otpData.expiresAt > Date.now()),
     activeEmail: otpData?.email ?? '',
-  });
+  };
 }
 
 // ─── Action ───────────────────────────────────────────────────────────────────
@@ -73,7 +71,7 @@ export async function action({ request, context }: ActionFunctionArgs) {
   if (intent === 'send_otp') {
     const email = (formData.get('email') as string)?.trim().toLowerCase();
     if (!email || !email.includes('@')) {
-      return json({ error: 'Please enter a valid email address.', step: 'email' }, { status: 400 });
+      return data({ error: 'Please enter a valid email address.', step: 'email' }, { status: 400 });
     }
 
     const code = generateOtp();
@@ -86,13 +84,13 @@ export async function action({ request, context }: ActionFunctionArgs) {
     const { success, error: emailError } = await sendOtpEmail(email, code, env);
 
     if (!success) {
-      return json(
+      return data(
         { error: `Could not deliver OTP email: ${emailError}. Please try again.`, step: 'email' },
         { status: 500 },
       );
     }
 
-    return json(
+    return data(
       {
         step: 'verify',
         email,
@@ -109,7 +107,7 @@ export async function action({ request, context }: ActionFunctionArgs) {
     const otpData = session.get('otpData') as OtpSessionData | undefined;
 
     if (!otpData) {
-      return json(
+      return data(
         { error: 'Session expired. Please request a new code.', step: 'email' },
         { status: 400 },
       );
@@ -118,7 +116,7 @@ export async function action({ request, context }: ActionFunctionArgs) {
     // Expiry check
     if (Date.now() > otpData.expiresAt) {
       session.unset('otpData');
-      return json(
+      return data(
         { error: 'Your code has expired. Please request a new one.', step: 'email' },
         { status: 400, headers: { 'Set-Cookie': await session.commit() } },
       );
@@ -127,7 +125,7 @@ export async function action({ request, context }: ActionFunctionArgs) {
     // Attempt limit
     if (otpData.attempts >= 5) {
       session.unset('otpData');
-      return json(
+      return data(
         { error: 'Too many incorrect attempts. Please request a new code.', step: 'email' },
         { status: 429, headers: { 'Set-Cookie': await session.commit() } },
       );
@@ -138,7 +136,7 @@ export async function action({ request, context }: ActionFunctionArgs) {
       otpData.attempts += 1;
       session.set('otpData', otpData);
       const remaining = 5 - otpData.attempts;
-      return json(
+      return data(
         {
           error: `Incorrect code. ${remaining} attempt${remaining !== 1 ? 's' : ''} remaining.`,
           step: 'verify',
@@ -164,13 +162,13 @@ export async function action({ request, context }: ActionFunctionArgs) {
   // ── RESET (change email) ──────────────────────────────────────────────────
   if (intent === 'reset_email') {
     session.unset('otpData');
-    return json(
+    return data(
       { step: 'email' },
       { headers: { 'Set-Cookie': await session.commit() } },
     );
   }
 
-  return json({ error: 'Invalid request.' }, { status: 400 });
+  return data({ error: 'Invalid request.' }, { status: 400 });
 }
 
 // ─── UI ───────────────────────────────────────────────────────────────────────

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { type MetaFunction } from '@remix-run/react';
+import { type MetaFunction } from 'react-router';
 import { Breadcrumb } from '~/components/ui/Breadcrumb';
 import { Input } from '~/components/ui/Input';
 import { Button } from '~/components/ui/Button';

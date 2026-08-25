@@ -1,5 +1,15 @@
-import { json, redirect, type ActionFunctionArgs, type LoaderFunctionArgs } from '@shopify/remix-oxygen';
-import { Form, useLoaderData, useNavigation, useActionData, type MetaFunction, Link } from '@remix-run/react';
+import {
+  Form,
+  useLoaderData,
+  useNavigation,
+  useActionData,
+  type MetaFunction,
+  Link,
+  data,
+  redirect,
+  type ActionFunctionArgs,
+  type LoaderFunctionArgs,
+} from 'react-router';
 import { CUSTOMER_DETAILS_QUERY } from '~/graphql/CustomerAccountQueries';
 import { Button } from '~/components/ui/Button';
 import { Input } from '~/components/ui/Input';
@@ -41,17 +51,17 @@ export async function loader({ context }: LoaderFunctionArgs) {
   try {
     const isLoggedIn = await customerAccount.isLoggedIn();
     if (isLoggedIn) {
-      const { data }: any = await customerAccount.query(CUSTOMER_DETAILS_QUERY);
-      customer = data?.customer;
+      const { data: customerData }: any = await customerAccount.query(CUSTOMER_DETAILS_QUERY);
+      customer = customerData?.customer;
     }
   } catch (error) {
     // Non-blocking for checkout
   }
 
-  return json({
+  return {
     cart: cartData,
     customer,
-  });
+  };
 }
 
 export async function action({ request, context }: ActionFunctionArgs) {
@@ -70,7 +80,7 @@ export async function action({ request, context }: ActionFunctionArgs) {
   const country = 'IN';
 
   if (!email || !firstName || !lastName || !phone || !address1 || !city || !province || !zip) {
-    return json({ error: 'Please fill in all required contact and delivery address fields.' }, { status: 400 });
+    return data({ error: 'Please fill in all required contact and delivery address fields.' }, { status: 400 });
   }
 
   // 3. Update Shopify Cart Buyer Identity and Delivery Address
@@ -106,7 +116,7 @@ export async function action({ request, context }: ActionFunctionArgs) {
     return redirect(checkoutUrl);
   }
 
-  return json({ error: 'Unable to initialize payment gateway. Please try again.' }, { status: 500 });
+  return data({ error: 'Unable to initialize payment gateway. Please try again.' }, { status: 500 });
 }
 
 export default function CheckoutPage() {

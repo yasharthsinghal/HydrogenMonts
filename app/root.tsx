@@ -7,8 +7,8 @@ import {
   useRouteLoaderData,
   useRouteError,
   isRouteErrorResponse,
-} from '@remix-run/react';
-import { type LoaderFunctionArgs, type LinksFunction, json } from '@shopify/remix-oxygen';
+  type LoaderFunctionArgs,
+} from 'react-router';
 import { useState, useEffect } from 'react';
 import appStyles from '~/styles/app.css?url';
 import { Header } from '~/components/common/Header';
@@ -16,7 +16,7 @@ import { Footer } from '~/components/common/Footer';
 import { MobileNav } from '~/components/common/MobileNav';
 import { CartDrawer } from '~/components/cart/CartDrawer';
 
-export const links: LinksFunction = () => [
+export const links = () => [
   { rel: 'stylesheet', href: appStyles },
   { rel: 'icon', type: 'image/svg+xml', href: '/favicon.svg' },
   { rel: 'preconnect', href: 'https://cdn.shopify.com' },
@@ -35,11 +35,11 @@ export async function loader({ context }: LoaderFunctionArgs) {
 
   const customerAccessToken = session.get('customerAccessToken');
 
-  return json({
+  return {
     cart: cartData,
     isLoggedIn: Boolean(customerAccessToken),
     publicStoreDomain: context.env.PUBLIC_STORE_DOMAIN,
-  });
+  };
 }
 
 export function Layout({ children }: { children?: React.ReactNode }) {

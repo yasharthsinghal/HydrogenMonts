@@ -1,6 +1,6 @@
 // Virtual entry point for the app
 // @ts-ignore
-import * as remixBuild from 'virtual:remix/server-build';
+import * as reactRouterBuild from 'virtual:react-router/server-build';
 import {
   createRequestHandler,
   createCookieSessionStorage,
@@ -122,11 +122,14 @@ export default {
           ? env.PUBLIC_CUSTOMER_ACCOUNT_API_CLIENT_ID
           : 'shp_c8a77f98-9d41-4770-9be0-128a8d167ef0';
 
+      const shopId = env.SHOP_ID || env.PUBLIC_STOREFRONT_ID || '47751d';
+
       const customerAccount = createCustomerAccountClient({
         session: session as any,
         customerAccountId: cleanCustomerAccountId,
-        customerAccountUrl: cleanCustomerAccountUrl,
+        shopId,
         request,
+        waitUntil: (p: Promise<unknown>) => executionContext.waitUntil(p),
       });
 
       /**
@@ -140,10 +143,10 @@ export default {
       });
 
       /**
-       * Create Remix Request Handler.
+       * Create React Router Request Handler.
        */
       const handleRequest = createRequestHandler({
-        build: remixBuild,
+        build: reactRouterBuild,
         mode: process.env.NODE_ENV,
         getLoadContext: () => ({
           session,

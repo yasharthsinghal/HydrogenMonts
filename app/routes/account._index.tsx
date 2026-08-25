@@ -1,5 +1,4 @@
-import { json, redirect, type LoaderFunctionArgs } from '@shopify/remix-oxygen';
-import { useLoaderData, Link, type MetaFunction } from '@remix-run/react';
+import { redirect, useLoaderData, Link, type MetaFunction, type LoaderFunctionArgs } from 'react-router';
 import { useState } from 'react';
 import { STOREFRONT_CUSTOMER_QUERY } from '~/graphql/StorefrontQueries';
 import { Breadcrumb } from '~/components/ui/Breadcrumb';
@@ -36,7 +35,7 @@ export async function loader({ context }: LoaderFunctionArgs) {
   );
   console.info(`📦 [Account Page Loader] Customer payload delivered to UI:`, JSON.stringify(customer, null, 2));
 
-  return json({ customerEmail, customer });
+  return { customerEmail, customer };
 }
 
 export default function AccountIndexRoute() {

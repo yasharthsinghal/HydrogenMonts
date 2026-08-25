@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { Link } from '@remix-run/react';
+import { Link } from 'react-router';
 import { X, ChevronRight, User, ShoppingBag } from 'lucide-react';
 import { NAV_ITEMS } from './Navigation';
 

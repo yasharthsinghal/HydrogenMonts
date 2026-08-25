@@ -1,4 +1,4 @@
-import { redirect, type ActionFunctionArgs, type LoaderFunctionArgs } from '@shopify/remix-oxygen';
+import { redirect, type ActionFunctionArgs, type LoaderFunctionArgs } from 'react-router';
 import { CUSTOMER_ACCESS_TOKEN_DELETE_MUTATION } from '~/graphql/StorefrontQueries';
 
 async function doLogout(context: any) {

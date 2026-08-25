@@ -1,5 +1,4 @@
-import { json, redirect, type LoaderFunctionArgs } from '@shopify/remix-oxygen';
-import { useLoaderData, Link, type MetaFunction } from '@remix-run/react';
+import { redirect, useLoaderData, Link, type MetaFunction, type LoaderFunctionArgs } from 'react-router';
 import { STOREFRONT_CUSTOMER_QUERY } from '~/graphql/StorefrontQueries';
 import { CheckCircle2, Package, ArrowRight, Truck, Clock, ShieldCheck } from 'lucide-react';
 import { Button } from '~/components/ui/Button';
@@ -46,7 +45,7 @@ export async function loader({ context, request }: LoaderFunctionArgs) {
   if (!requestedOrderId) {
     // If no specific order was requested, pick the latest processed order if available
     if (orders.length > 0) {
-      return json({ customer, order: orders[0] });
+      return { customer, order: orders[0] };
     }
     return redirect('/account');
   }
@@ -68,7 +67,7 @@ export async function loader({ context, request }: LoaderFunctionArgs) {
     throw new Response('Order Not Found or Unauthorized', { status: 404 });
   }
 
-  return json({ customer, order: matchedOrder });
+  return { customer, order: matchedOrder };
 }
 
 export default function OrderSuccessRoute() {

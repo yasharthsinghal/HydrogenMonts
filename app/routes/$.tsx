@@ -1,5 +1,5 @@
 import React from 'react';
-import { type MetaFunction } from '@remix-run/react';
+import { type MetaFunction } from 'react-router';
 import { EmptyState } from '~/components/ui/EmptyState';
 import { HelpCircle } from 'lucide-react';
 

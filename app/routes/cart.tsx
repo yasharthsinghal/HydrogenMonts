@@ -1,6 +1,5 @@
 import { useState } from 'react';
-import { json, type ActionFunctionArgs, type LoaderFunctionArgs } from '@shopify/remix-oxygen';
-import { useLoaderData, useFetcher, Link, type MetaFunction } from '@remix-run/react';
+import { data, useLoaderData, useFetcher, Link, type MetaFunction, type ActionFunctionArgs, type LoaderFunctionArgs } from 'react-router';
 import { CartItem } from '~/components/cart/CartItem';
 import { Breadcrumb } from '~/components/ui/Breadcrumb';
 import { EmptyState } from '~/components/ui/EmptyState';
@@ -22,7 +21,7 @@ export async function action({ request, context }: ActionFunctionArgs) {
 
   if (!formInput || typeof formInput !== 'string') {
     logger.warn('Cart action rejected: missing cartFormInput');
-    return json({ error: 'Invalid cart input' }, { status: 400 });
+    return data({ error: 'Invalid cart input' }, { status: 400 });
   }
 
   let result;
@@ -42,7 +41,7 @@ export async function action({ request, context }: ActionFunctionArgs) {
         break;
       default:
         logger.warn(`Unknown Cart Action requested: ${cartAction}`);
-        return json({ error: 'Unknown cart action' }, { status: 400 });
+        return data({ error: 'Unknown cart action' }, { status: 400 });
     }
 
     const headers = cart.setCartId(result.cart.id);
@@ -50,10 +49,10 @@ export async function action({ request, context }: ActionFunctionArgs) {
       cartId: result.cart.id,
       totalQuantity: result.cart.totalQuantity,
     });
-    return json(result, { status: 200, headers });
+    return data(result, { status: 200, headers });
   } catch (error: any) {
     logger.error('Cart Action Error', error, { formInput });
-    return json({ error: error.message || 'Cart operation failed' }, { status: 500 });
+    return data({ error: error.message || 'Cart operation failed' }, { status: 500 });
   }
 }
 
@@ -66,7 +65,7 @@ export async function loader({ context }: LoaderFunctionArgs) {
     console.error('Cart loader error:', error);
   }
 
-  return json({ cart: cartData });
+  return { cart: cartData };
 }
 
 export default function CartRoute() {

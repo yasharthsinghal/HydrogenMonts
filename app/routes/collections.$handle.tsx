@@ -1,5 +1,4 @@
-import { json, type LoaderFunctionArgs } from '@shopify/remix-oxygen';
-import { useLoaderData, useNavigate, useLocation, type MetaFunction } from '@remix-run/react';
+import { useLoaderData, useNavigate, useLocation, type MetaFunction, type LoaderFunctionArgs } from 'react-router';
 import { COLLECTION_BY_HANDLE_QUERY, ALL_PRODUCTS_QUERY } from '~/graphql/StorefrontQueries';
 import type { ProductCardItem } from '~/types/storefront.types';
 import { Breadcrumb } from '~/components/ui/Breadcrumb';
@@ -80,12 +79,12 @@ export async function loader({ params, request, context }: LoaderFunctionArgs) {
         image: null,
       };
 
-      return json({
+      return {
         collection,
         products,
         currentSort: sort,
         canonicalUrl,
-      });
+      };
     } catch (error) {
       console.error('All products query error:', error);
       throw new Response('Error loading products', { status: 500 });
@@ -138,12 +137,12 @@ export async function loader({ params, request, context }: LoaderFunctionArgs) {
     throw new Response('Collection Not Found', { status: 404 });
   }
 
-  return json({
+  return {
     collection,
     products: (collection.products?.nodes || []) as ProductCardItem[],
     currentSort: sort,
     canonicalUrl,
-  });
+  };
 }
 
 export default function CollectionDetailRoute() {

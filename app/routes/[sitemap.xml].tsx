@@ -1,4 +1,4 @@
-import { type LoaderFunctionArgs } from '@shopify/remix-oxygen';
+import { type LoaderFunctionArgs } from 'react-router';
 
 const SITEMAP_QUERY = `#graphql
   query Sitemap($country: CountryCode, $language: LanguageCode)

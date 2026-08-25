@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Link, useFetcher } from '@remix-run/react';
+import { Link, useFetcher } from 'react-router';
 import { Eye, ShoppingBag, Loader2 } from 'lucide-react';
 import type { ProductCardItem } from '~/types/storefront.types';
 import { Badge } from '~/components/ui/Badge';

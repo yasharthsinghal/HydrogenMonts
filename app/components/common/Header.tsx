@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Link } from '@remix-run/react';
+import { Link } from 'react-router';
 import { AnnouncementBar } from './AnnouncementBar';
 import { Navigation } from './Navigation';
 import { Search, ShoppingBag, User, Menu } from 'lucide-react';

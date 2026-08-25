@@ -1,5 +1,4 @@
-import { json, type LoaderFunctionArgs } from '@shopify/remix-oxygen';
-import { useLoaderData, Link, type MetaFunction } from '@remix-run/react';
+import { useLoaderData, Link, type MetaFunction, type LoaderFunctionArgs } from 'react-router';
 import { HOMEPAGE_QUERY } from '~/graphql/StorefrontQueries';
 import type { ProductCardItem, CollectionCardItem } from '~/types/storefront.types';
 import { ProductGrid } from '~/components/products/ProductGrid';
@@ -51,13 +50,13 @@ export async function loader({ request, context }: LoaderFunctionArgs) {
     };
   }
 
-  return json({
+  return {
     baseUrl,
     shop: homepageData.shop,
     collections: (homepageData.collections?.nodes || []) as CollectionCardItem[],
     featuredProducts: (homepageData.featuredProducts?.nodes || []) as ProductCardItem[],
     allProducts: (homepageData.allProducts?.nodes || []) as ProductCardItem[],
-  });
+  };
 }
 
 export default function IndexRoute() {

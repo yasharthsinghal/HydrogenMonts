@@ -1,5 +1,4 @@
-import { type MetaFunction, json, type LoaderFunctionArgs } from '@shopify/remix-oxygen';
-import { Link, useSearchParams } from '@remix-run/react';
+import { Link, useSearchParams, type MetaFunction, type LoaderFunctionArgs } from 'react-router';
 import { CheckCircle2, ShoppingBag, ArrowRight, ShieldCheck, Truck, Clock, Phone, Mail } from 'lucide-react';
 import { Button } from '~/components/ui/Button';
 
@@ -11,9 +10,9 @@ export const meta: MetaFunction = () => {
 };
 
 export async function loader({ context }: LoaderFunctionArgs) {
-  return json({
+  return {
     storeDomain: context.env.PUBLIC_STORE_DOMAIN,
-  });
+  };
 }
 
 export default function ThankYouRoute() {
