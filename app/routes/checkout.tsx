@@ -11,6 +11,7 @@ import {
   type LoaderFunctionArgs,
 } from 'react-router';
 import { CUSTOMER_DETAILS_QUERY } from '~/graphql/CustomerAccountQueries';
+import { shopifyCustomerService } from '~/services/shopify/customer.server';
 import { Button } from '~/components/ui/Button';
 import { Input } from '~/components/ui/Input';
 import { Breadcrumb } from '~/components/ui/Breadcrumb';
@@ -36,7 +37,7 @@ export const meta: MetaFunction = () => {
 };
 
 export async function loader({ context }: LoaderFunctionArgs) {
-  const { cart, customerAccount } = context;
+  const { session, cart, customerAccount, storefront, env } = context;
 
   // 1. Retrieve single authoritative Shopify cart
   const cartData = await cart.get();
@@ -46,16 +47,25 @@ export async function loader({ context }: LoaderFunctionArgs) {
     return redirect('/cart');
   }
 
-  // 2. Fetch authenticated customer profile if logged in (optional pre-fill)
+  // 2. Fetch authenticated customer profile if logged in (via OTP session or Customer Account API)
   let customer: any = null;
-  try {
-    const isLoggedIn = await customerAccount.isLoggedIn();
-    if (isLoggedIn) {
-      const { data: customerData }: any = await customerAccount.query(CUSTOMER_DETAILS_QUERY);
-      customer = customerData?.customer;
+  const customerEmail = session.get('customerEmail') as string | undefined;
+  if (customerEmail) {
+    try {
+      customer = await shopifyCustomerService.getCustomerProfile(storefront, undefined, customerEmail, env);
+    } catch (error) {
+      // Non-blocking
     }
-  } catch (error) {
-    // Non-blocking for checkout
+  } else {
+    try {
+      const isLoggedIn = await customerAccount.isLoggedIn();
+      if (isLoggedIn) {
+        const { data: customerData }: any = await customerAccount.query(CUSTOMER_DETAILS_QUERY);
+        customer = customerData?.customer;
+      }
+    } catch (error) {
+      // Non-blocking for checkout
+    }
   }
 
   return {

@@ -16,6 +16,8 @@ import { Breadcrumb } from '~/components/ui/Breadcrumb';
 import { sanitizeRedirect } from '~/lib/redirect';
 import {
   generateOtp,
+  hashOtp,
+  verifyOtpHash,
   sendOtpEmail,
   syncCustomerWithShopify,
   type OtpSessionData,
@@ -75,9 +77,10 @@ export async function action({ request, context }: ActionFunctionArgs) {
     }
 
     const code = generateOtp();
+    const codeHash = await hashOtp(code, email, sessionSecret);
     const expiresAt = Date.now() + 10 * 60 * 1000; // 10 min
 
-    const otpData: OtpSessionData = { email, code, expiresAt, attempts: 0 };
+    const otpData: OtpSessionData = { email, codeHash, expiresAt, attempts: 0 };
     session.set('otpData', otpData);
 
     // Dispatch OTP email via active provider (Google SMTP / Resend / Dev Logger)
@@ -131,8 +134,9 @@ export async function action({ request, context }: ActionFunctionArgs) {
       );
     }
 
-    // Wrong code
-    if (otpData.code !== otpInput) {
+    // Wrong code check using secure hash comparison
+    const isValid = await verifyOtpHash(otpInput, otpData.email, sessionSecret, otpData.codeHash);
+    if (!isValid) {
       otpData.attempts += 1;
       session.set('otpData', otpData);
       const remaining = 5 - otpData.attempts;
