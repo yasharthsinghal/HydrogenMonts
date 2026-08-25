@@ -26,18 +26,22 @@ export async function getAdminAccessToken(env: Env): Promise<string | null> {
   }
 
   // 3. Extract Client ID & Secret
-  const clientId = env.SHOPIFY_ADMIN_CLIENT_ID || 'c29ec1e24c353723dcb54cc0c6fbcba6';
+  const clientId = env.SHOPIFY_ADMIN_CLIENT_ID;
   // Secret can come from SHOPIFY_ADMIN_CLIENT_SECRET or SHOPIFY_ADMIN_API_TOKEN if it begins with shpss_
   const clientSecret =
     env.SHOPIFY_ADMIN_CLIENT_SECRET ||
     (env.SHOPIFY_ADMIN_API_TOKEN?.startsWith('shpss_') ? env.SHOPIFY_ADMIN_API_TOKEN : null);
 
   if (!clientId || !clientSecret) {
-    console.warn('[Shopify Admin Token] Missing SHOPIFY_ADMIN_CLIENT_ID or SHOPIFY_ADMIN_CLIENT_SECRET.');
+    console.warn('[Shopify Admin Token] Missing SHOPIFY_ADMIN_CLIENT_ID or SHOPIFY_ADMIN_CLIENT_SECRET in environment.');
     return null;
   }
 
-  const storeDomain = env.PUBLIC_STORE_DOMAIN || '47751d.myshopify.com';
+  const storeDomain = env.PUBLIC_STORE_DOMAIN;
+  if (!storeDomain) {
+    console.warn('[Shopify Admin Token] Missing PUBLIC_STORE_DOMAIN in environment.');
+    return null;
+  }
 
   try {
     const res = await fetch(`https://${storeDomain}/admin/oauth/access_token`, {

@@ -18,7 +18,10 @@ async function adminGraphQL(
   variables: Record<string, any>,
   env: Env,
 ): Promise<any> {
-  const storeDomain = env.PUBLIC_STORE_DOMAIN || '47751d.myshopify.com';
+  const storeDomain = env.PUBLIC_STORE_DOMAIN;
+  if (!storeDomain) {
+    throw new Error('[Shopify Customer Service] PUBLIC_STORE_DOMAIN is missing in environment.');
+  }
   const adminApiVersion = env.SHOPIFY_ADMIN_API_VERSION || '2025-01';
   const adminToken = await getAdminAccessToken(env);
 

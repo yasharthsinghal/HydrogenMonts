@@ -1,7 +1,5 @@
 /// <reference types="vite/client" />
 /// <reference types="react-router" />
-/// <reference types="@shopify/remix-oxygen" />
-/// <reference types="@shopify/oxygen-workers-types" />
 
 import type {
   HydrogenCartCustom,
@@ -60,17 +58,6 @@ declare global {
 }
 
 declare module 'react-router' {
-  interface AppLoadContext {
-    env: Env;
-    cart: HydrogenCartCustom;
-    storefront: ReturnType<typeof createStorefrontClient>['storefront'];
-    customerAccount: ReturnType<typeof createCustomerAccountClient>;
-    session: AppSession;
-    waitUntil: ExecutionContext['waitUntil'];
-  }
-}
-
-declare module '@shopify/remix-oxygen' {
   interface AppLoadContext {
     env: Env;
     cart: HydrogenCartCustom;

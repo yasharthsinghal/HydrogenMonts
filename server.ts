@@ -2,18 +2,19 @@
 // @ts-ignore
 import * as reactRouterBuild from 'virtual:react-router/server-build';
 import {
-  createRequestHandler,
   createCookieSessionStorage,
   type SessionStorage,
   type Session,
-} from '@shopify/remix-oxygen';
+} from 'react-router';
 import {
+  createRequestHandler,
   createStorefrontClient,
   createCustomerAccountClient,
   createCartHandler,
   cartGetIdDefault,
   cartSetIdDefault,
 } from '@shopify/hydrogen';
+import { logger } from '~/utils/logger.server';
 
 /**
  * Standard Hydrogen cookie session wrapper implementing HydrogenSession interface.
@@ -68,154 +69,164 @@ export class AppSession {
   }
 }
 
-import { logger } from '~/utils/logger.server';
-
 /**
- * Export a fetch handler in format required by OpenWorker / Oxygen.
+ * Universal fetch handler for Node 22, Vercel, and Cloudflare environments.
  */
-export default {
-  async fetch(
-    request: Request,
-    env: Env,
-    executionContext: ExecutionContext,
-  ): Promise<Response> {
-    const startTime = performance.now();
-    const url = new URL(request.url);
+export async function fetchHandler(
+  request: Request,
+  rawEnv?: Env,
+  rawExecutionContext?: ExecutionContext,
+): Promise<Response> {
+  const startTime = performance.now();
+  const url = new URL(request.url);
 
-    try {
-      /**
-       * Open an isolated cookie-based session for the visitor.
-       */
-      const session = await AppSession.init(request, [
-        env.SESSION_SECRET || 'monts-default-session-secret',
-      ]);
+  // Normalize environment variables between Cloudflare/Oxygen and Node.js/Vercel
+  const env: Env = (
+    rawEnv && Object.keys(rawEnv).length > 0
+      ? rawEnv
+      : (process.env as unknown as Env)
+  ) || (process.env as unknown as Env);
 
-      /**
-       * Create Storefront Client.
-       */
-      const { storefront } = createStorefrontClient({
-        i18n: { language: 'EN', country: 'IN' },
-        publicStorefrontToken: env.PUBLIC_STOREFRONT_API_TOKEN,
-        privateStorefrontToken:
-          env.PRIVATE_STOREFRONT_API_TOKEN &&
-          env.PRIVATE_STOREFRONT_API_TOKEN.length > 20 &&
-          !env.PRIVATE_STOREFRONT_API_TOKEN.includes('your_')
-            ? env.PRIVATE_STOREFRONT_API_TOKEN
-            : undefined,
-        storeDomain: env.PUBLIC_STORE_DOMAIN,
-        storefrontId: env.PUBLIC_STOREFRONT_ID,
-      });
+  const executionContext = rawExecutionContext || {
+    waitUntil: (p: Promise<unknown>) => {
+      p.catch((err) => console.error('[Background Task Error]', err));
+    },
+    passThroughOnException: () => {},
+  };
 
-      /**
-       * Create Customer Account API Client.
-       */
-      const cleanCustomerAccountUrl = (
-        env.PUBLIC_CUSTOMER_ACCOUNT_API_URL || 'https://shopify.com/47751d'
-      )
-        .replace(/\/auth\/?$/, '')
-        .replace(/\/account\/?$/, '');
+  try {
+    if (!env.SESSION_SECRET) {
+      throw new Error('[MONTS] SESSION_SECRET is not set in environment. Refusing to start with an insecure session.');
+    }
 
-      const cleanCustomerAccountId =
-        env.PUBLIC_CUSTOMER_ACCOUNT_API_CLIENT_ID &&
-        !env.PUBLIC_CUSTOMER_ACCOUNT_API_CLIENT_ID.includes('your_')
-          ? env.PUBLIC_CUSTOMER_ACCOUNT_API_CLIENT_ID
-          : 'shp_c8a77f98-9d41-4770-9be0-128a8d167ef0';
+    /**
+     * Open an isolated cookie-based session for the visitor.
+     */
+    const session = await AppSession.init(request, [env.SESSION_SECRET]);
 
-      const shopId = env.SHOP_ID || env.PUBLIC_STOREFRONT_ID || '47751d';
+    /**
+     * Create Storefront Client.
+     */
+    const { storefront } = createStorefrontClient({
+      i18n: { language: 'EN', country: 'IN' },
+      publicStorefrontToken: env.PUBLIC_STOREFRONT_API_TOKEN,
+      privateStorefrontToken:
+        env.PRIVATE_STOREFRONT_API_TOKEN &&
+        env.PRIVATE_STOREFRONT_API_TOKEN.length > 20 &&
+        !env.PRIVATE_STOREFRONT_API_TOKEN.includes('your_')
+          ? env.PRIVATE_STOREFRONT_API_TOKEN
+          : undefined,
+      storeDomain: env.PUBLIC_STORE_DOMAIN,
+      storefrontId: env.PUBLIC_STOREFRONT_ID,
+    });
 
-      const customerAccount = createCustomerAccountClient({
-        session: session as any,
-        customerAccountId: cleanCustomerAccountId,
-        shopId,
-        request,
-        waitUntil: (p: Promise<unknown>) => executionContext.waitUntil(p),
-      });
+    /**
+     * Create Customer Account API Client.
+     */
+    const customerAccountId =
+      env.PUBLIC_CUSTOMER_ACCOUNT_API_CLIENT_ID &&
+      !env.PUBLIC_CUSTOMER_ACCOUNT_API_CLIENT_ID.includes('your_')
+        ? env.PUBLIC_CUSTOMER_ACCOUNT_API_CLIENT_ID
+        : 'shp_c8a77f98-9d41-4770-9be0-128a8d167ef0';
 
-      /**
-       * Create Hydrogen Cart Handler.
-       */
-      const cart = createCartHandler({
+    const shopId = env.SHOP_ID || env.PUBLIC_STOREFRONT_ID || '';
+
+    const customerAccount = createCustomerAccountClient({
+      session: session as any,
+      customerAccountId,
+      shopId,
+      request,
+      waitUntil: (p: Promise<unknown>) => executionContext.waitUntil(p),
+    });
+
+    /**
+     * Create Hydrogen Cart Handler.
+     */
+    const cart = createCartHandler({
+      storefront,
+      customerAccount,
+      getCartId: cartGetIdDefault(request.headers),
+      setCartId: cartSetIdDefault(),
+    });
+
+    /**
+     * Create React Router / Hydrogen Request Handler.
+     */
+    const handleRequest = createRequestHandler({
+      build: reactRouterBuild,
+      mode: process.env.NODE_ENV,
+      getLoadContext: () => ({
+        session,
         storefront,
         customerAccount,
-        getCartId: cartGetIdDefault(request.headers),
-        setCartId: cartSetIdDefault(),
-      });
+        cart,
+        env,
+        waitUntil: (p: Promise<unknown>) => executionContext.waitUntil(p),
+      }),
+    });
 
-      /**
-       * Create React Router Request Handler.
-       */
-      const handleRequest = createRequestHandler({
-        build: reactRouterBuild,
-        mode: process.env.NODE_ENV,
-        getLoadContext: () => ({
-          session,
-          storefront,
-          customerAccount,
-          cart,
-          env,
-          waitUntil: (p: Promise<unknown>) => executionContext.waitUntil(p),
-        }),
-      });
+    // Normalize host / x-forwarded-host headers for local loopback (localhost vs 127.0.0.1)
+    let req = request;
+    const origin = request.headers.get('origin');
+    const host = request.headers.get('host');
+    const forwardedHost = request.headers.get('x-forwarded-host');
 
-      // Normalize host / x-forwarded-host headers for local loopback (localhost vs 127.0.0.1)
-      let req = request;
-      const origin = request.headers.get('origin');
-      const host = request.headers.get('host');
-      const forwardedHost = request.headers.get('x-forwarded-host');
-
-      if (origin && (host || forwardedHost)) {
-        try {
-          const originHost = new URL(origin).host;
-          const currentHost = forwardedHost || host;
-          if (
-            originHost !== currentHost &&
-            (originHost.includes('localhost') || originHost.includes('127.0.0.1')) &&
-            (currentHost?.includes('localhost') || currentHost?.includes('127.0.0.1'))
-          ) {
-            const headers = new Headers(request.headers);
-            headers.set('host', originHost);
-            headers.set('x-forwarded-host', originHost);
-            req = new Request(request.url, {
-              method: request.method,
-              headers,
-              body: request.body,
-              // @ts-ignore
-              duplex: 'half',
-            });
-          }
-        } catch {
-          // ignore invalid URLs
+    if (origin && (host || forwardedHost)) {
+      try {
+        const originHost = new URL(origin).host;
+        const currentHost = forwardedHost || host;
+        if (
+          originHost !== currentHost &&
+          (originHost.includes('localhost') || originHost.includes('127.0.0.1')) &&
+          (currentHost?.includes('localhost') || currentHost?.includes('127.0.0.1'))
+        ) {
+          const headers = new Headers(request.headers);
+          headers.set('host', originHost);
+          headers.set('x-forwarded-host', originHost);
+          req = new Request(request.url, {
+            method: request.method,
+            headers,
+            body: request.body,
+            // @ts-ignore
+            duplex: 'half',
+          });
         }
+      } catch {
+        // ignore invalid URLs
       }
-
-      const response = await handleRequest(req);
-
-      if (
-        session.has('cartId') ||
-        session.has('customerAccessToken') ||
-        session.has('customerEmail') ||
-        session.has('otpData')
-      ) {
-        response.headers.append('Set-Cookie', await session.commit());
-      }
-
-      const durationMs = Math.round(performance.now() - startTime);
-      logger.info(`${request.method} ${url.pathname} -> ${response.status}`, {
-        method: request.method,
-        path: url.pathname,
-        status: response.status,
-        durationMs,
-      });
-
-      return response;
-    } catch (error) {
-      const durationMs = Math.round(performance.now() - startTime);
-      logger.error(`Oxygen Worker Error on ${request.method} ${url.pathname}`, error, {
-        method: request.method,
-        path: url.pathname,
-        durationMs,
-      });
-      return new Response('An unexpected server error occurred', { status: 500 });
     }
-  },
+
+    const response = await handleRequest(req);
+
+    if (
+      session.has('cartId') ||
+      session.has('customerAccessToken') ||
+      session.has('customerEmail') ||
+      session.has('otpData')
+    ) {
+      response.headers.append('Set-Cookie', await session.commit());
+    }
+
+    const durationMs = Math.round(performance.now() - startTime);
+    logger.info(`${request.method} ${url.pathname} -> ${response.status}`, {
+      method: request.method,
+      path: url.pathname,
+      status: response.status,
+      durationMs,
+    });
+
+    return response;
+  } catch (error) {
+    const durationMs = Math.round(performance.now() - startTime);
+    logger.error(`Server Error on ${request.method} ${url.pathname}`, error, {
+      method: request.method,
+      path: url.pathname,
+      durationMs,
+    });
+    return new Response('An unexpected server error occurred', { status: 500 });
+  }
+}
+
+export default {
+  fetch: fetchHandler,
 };

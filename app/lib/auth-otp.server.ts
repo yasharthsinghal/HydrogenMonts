@@ -15,7 +15,9 @@ export interface OtpSessionData {
   email: string;
   codeHash: string;
   expiresAt: number;
+  sentAt: number;
   attempts: number;
+  used?: boolean;
 }
 
 /** Generates a cryptographically random 6-digit numeric OTP. */

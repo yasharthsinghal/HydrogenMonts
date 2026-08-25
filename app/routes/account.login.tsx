@@ -64,7 +64,11 @@ export async function loader({ context, request }: LoaderFunctionArgs) {
 
 export async function action({ request, context }: ActionFunctionArgs) {
   const { session, storefront, env } = context;
-  const sessionSecret = env.SESSION_SECRET || 'monts_fallback_secret';
+  const sessionSecret = env.SESSION_SECRET;
+  if (!sessionSecret) {
+    throw new Error('[MONTS] SESSION_SECRET is required in environment for secure OTP hashing.');
+  }
+
   const formData = await request.formData();
   const intent = formData.get('intent') as string;
   const returnTo = sanitizeRedirect(formData.get('return_to') as string, '/account');
@@ -76,11 +80,42 @@ export async function action({ request, context }: ActionFunctionArgs) {
       return data({ error: 'Please enter a valid email address.', step: 'email' }, { status: 400 });
     }
 
+    // Check 60-second resend cooldown
+    const existingOtp = session.get('otpData') as OtpSessionData | undefined;
+    const RESEND_COOLDOWN_MS = 60 * 1000;
+    if (
+      existingOtp &&
+      existingOtp.email === email &&
+      existingOtp.expiresAt > Date.now() &&
+      existingOtp.sentAt &&
+      Date.now() - existingOtp.sentAt < RESEND_COOLDOWN_MS
+    ) {
+      const secondsLeft = Math.ceil(
+        (RESEND_COOLDOWN_MS - (Date.now() - existingOtp.sentAt)) / 1000,
+      );
+      return data(
+        {
+          error: `Please wait ${secondsLeft}s before requesting a new code.`,
+          step: 'verify',
+          email,
+        },
+        { status: 429 },
+      );
+    }
+
     const code = generateOtp();
     const codeHash = await hashOtp(code, email, sessionSecret);
     const expiresAt = Date.now() + 10 * 60 * 1000; // 10 min
+    const sentAt = Date.now();
 
-    const otpData: OtpSessionData = { email, codeHash, expiresAt, attempts: 0 };
+    const otpData: OtpSessionData = {
+      email,
+      codeHash,
+      expiresAt,
+      sentAt,
+      attempts: 0,
+      used: false,
+    };
     session.set('otpData', otpData);
 
     // Dispatch OTP email via active provider (Google SMTP / Resend / Dev Logger)
@@ -109,9 +144,9 @@ export async function action({ request, context }: ActionFunctionArgs) {
     const emailInput = (formData.get('email') as string)?.trim().toLowerCase();
     const otpData = session.get('otpData') as OtpSessionData | undefined;
 
-    if (!otpData) {
+    if (!otpData || otpData.used) {
       return data(
-        { error: 'Session expired. Please request a new code.', step: 'email' },
+        { error: 'Session expired or code already used. Please request a new code.', step: 'email' },
         { status: 400 },
       );
     }
@@ -150,11 +185,15 @@ export async function action({ request, context }: ActionFunctionArgs) {
       );
     }
 
-    // ✅ OTP correct — sync customer with Shopify via Admin API (fully passwordless)
+    // ✅ OTP correct — mark used immediately to prevent replay race conditions
+    otpData.used = true;
+    session.set('otpData', otpData);
+
+    // Sync customer with Shopify via Admin API (fully passwordless)
     const verifiedEmail = emailInput || otpData.email;
     await syncCustomerWithShopify(storefront, verifiedEmail, sessionSecret, env);
 
-    // Store only the verified email — Admin API handles all data fetching
+    // Store verified email and clean up OTP challenge
     session.set('customerEmail', verifiedEmail);
     session.unset('otpData');
 

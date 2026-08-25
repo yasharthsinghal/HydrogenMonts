@@ -4,9 +4,42 @@
  */
 
 import { performance } from 'node:perf_hooks';
+import fs from 'node:fs';
+import path from 'node:path';
 
-const endpoint = 'https://47751d.myshopify.com/api/2024-10/graphql.json';
-const token = 'e4b8dc168f927b126caed9bb5b5d0e85';
+// Helper to load .env if process.env values are not set
+function loadEnv() {
+  try {
+    const envPath = path.resolve(process.cwd(), '.env');
+    if (fs.existsSync(envPath)) {
+      const content = fs.readFileSync(envPath, 'utf8');
+      for (const line of content.split('\n')) {
+        const trimmed = line.trim();
+        if (trimmed && !trimmed.startsWith('#') && trimmed.includes('=')) {
+          const [key, ...rest] = trimmed.split('=');
+          const val = rest.join('=').replace(/^["']|["']$/g, '');
+          if (!process.env[key.trim()]) {
+            process.env[key.trim()] = val;
+          }
+        }
+      }
+    }
+  } catch {
+    // ignore
+  }
+}
+
+loadEnv();
+
+const domain = process.env.PUBLIC_STORE_DOMAIN || '47751d.myshopify.com';
+const apiVersion = process.env.PUBLIC_STOREFRONT_API_VERSION || '2025-01';
+const endpoint = `https://${domain}/api/${apiVersion}/graphql.json`;
+const token = process.env.PUBLIC_STOREFRONT_API_TOKEN;
+
+if (!token) {
+  console.error('❌ Error: PUBLIC_STOREFRONT_API_TOKEN is missing in environment/.env');
+  process.exit(1);
+}
 
 // Core Fragments
 const MONEY_FRAGMENT = `
