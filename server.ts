@@ -104,7 +104,6 @@ export default {
             : undefined,
         storeDomain: env.PUBLIC_STORE_DOMAIN,
         storefrontId: env.PUBLIC_STOREFRONT_ID,
-        storefrontApiVersion: '2024-10',
       });
 
       /**

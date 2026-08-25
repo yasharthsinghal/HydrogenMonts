@@ -28,6 +28,7 @@ declare global {
     PUBLIC_CUSTOMER_ACCOUNT_API_URL: string;
 
     // Shopify Admin API (Dynamic Client Credentials or Static Token)
+    SHOPIFY_ADMIN_API_VERSION?: string;
     SHOPIFY_ADMIN_API_TOKEN?: string;
     SHOPIFY_ADMIN_CLIENT_ID?: string;
     SHOPIFY_ADMIN_CLIENT_SECRET?: string;

@@ -19,10 +19,11 @@ async function adminGraphQL(
   env: Env,
 ): Promise<any> {
   const storeDomain = env.PUBLIC_STORE_DOMAIN || '47751d.myshopify.com';
+  const adminApiVersion = env.SHOPIFY_ADMIN_API_VERSION || '2025-01';
   const adminToken = await getAdminAccessToken(env);
 
   console.info(`\n🌐 [Shopify Admin API Request: ${queryName}]`);
-  console.info(`📍 Endpoint: https://${storeDomain}/admin/api/2024-10/graphql.json`);
+  console.info(`📍 Endpoint: https://${storeDomain}/admin/api/${adminApiVersion}/graphql.json`);
   console.info(`🔑 Token in use: ${adminToken ? `${adminToken.substring(0, 10)}...` : 'NONE'}`);
   console.info(`📦 Variables:`, JSON.stringify(variables));
 
@@ -32,7 +33,7 @@ async function adminGraphQL(
   }
 
   const res = await fetch(
-    `https://${storeDomain}/admin/api/2024-10/graphql.json`,
+    `https://${storeDomain}/admin/api/${adminApiVersion}/graphql.json`,
     {
       method: 'POST',
       headers: {
