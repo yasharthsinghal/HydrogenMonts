@@ -13,6 +13,22 @@ export default defineConfig({
     reactRouter(),
     tsconfigPaths(),
   ],
+  resolve: {
+    dedupe: ['react', 'react-dom'],
+  },
+  optimizeDeps: {
+    include: [
+      'react',
+      'react-dom',
+      'react-dom/client',
+      'react/jsx-runtime',
+      'react/jsx-dev-runtime',
+      'react-router',
+      'clsx',
+      'tailwind-merge',
+      'lucide-react',
+    ],
+  },
   build: {
     assetsInlineLimit: 0,
   },
