@@ -36,8 +36,10 @@ export const meta: MetaFunction = () => {
   ];
 };
 
-export async function loader({ context }: LoaderFunctionArgs) {
-  const { session, cart, customerAccount, storefront, env } = context;
+import { getHydrogenContext } from '~/lib/context.server';
+
+export async function loader({ context, request }: LoaderFunctionArgs) {
+  const { session, cart, customerAccount, storefront, env } = await getHydrogenContext(context, request);
 
   // 1. Retrieve single authoritative Shopify cart
   const cartData = await cart.get();
@@ -75,7 +77,7 @@ export async function loader({ context }: LoaderFunctionArgs) {
 }
 
 export async function action({ request, context }: ActionFunctionArgs) {
-  const { cart } = context;
+  const { cart } = await getHydrogenContext(context, request);
 
   const formData = await request.formData();
   const email = (formData.get('email') as string)?.trim();

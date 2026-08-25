@@ -5,6 +5,8 @@ import { Breadcrumb } from '~/components/ui/Breadcrumb';
 import { ProductGrid } from '~/components/products/ProductGrid';
 import { Search } from 'lucide-react';
 
+import { getHydrogenContext } from '~/lib/context.server';
+
 export const meta: MetaFunction = () => {
   return [
     { title: 'Search Storefront | MONTS' },
@@ -13,7 +15,7 @@ export const meta: MetaFunction = () => {
 };
 
 export async function loader({ request, context }: LoaderFunctionArgs) {
-  const { storefront } = context;
+  const { storefront } = await getHydrogenContext(context, request);
   const url = new URL(request.url);
   const query = url.searchParams.get('q') || '';
 

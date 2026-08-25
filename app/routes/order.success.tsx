@@ -5,6 +5,8 @@ import { Button } from '~/components/ui/Button';
 import { Badge } from '~/components/ui/Badge';
 import { Breadcrumb } from '~/components/ui/Breadcrumb';
 
+import { getHydrogenContext } from '~/lib/context.server';
+
 export const meta: MetaFunction = () => {
   return [
     { title: 'Order Confirmation | MONTS' },
@@ -13,7 +15,7 @@ export const meta: MetaFunction = () => {
 };
 
 export async function loader({ context, request }: LoaderFunctionArgs) {
-  const { session, storefront } = context;
+  const { session, storefront } = await getHydrogenContext(context, request);
   const token = session.get('customerAccessToken');
 
   // 1. Verify customer authentication

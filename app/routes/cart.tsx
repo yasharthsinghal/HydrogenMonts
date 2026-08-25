@@ -7,6 +7,8 @@ import { Button } from '~/components/ui/Button';
 import { ShoppingBag, ArrowRight } from 'lucide-react';
 import { logger } from '~/utils/logger.server';
 
+import { getHydrogenContext } from '~/lib/context.server';
+
 export const meta: MetaFunction = () => {
   return [
     { title: 'Shopping Cart | MONTS' },
@@ -15,7 +17,7 @@ export const meta: MetaFunction = () => {
 };
 
 export async function action({ request, context }: ActionFunctionArgs) {
-  const { cart } = context;
+  const { cart } = await getHydrogenContext(context, request);
   const formData = await request.formData();
   const formInput = formData.get('cartFormInput');
 
@@ -56,8 +58,8 @@ export async function action({ request, context }: ActionFunctionArgs) {
   }
 }
 
-export async function loader({ context }: LoaderFunctionArgs) {
-  const { cart } = context;
+export async function loader({ context, request }: LoaderFunctionArgs) {
+  const { cart } = await getHydrogenContext(context, request);
   let cartData = null;
   try {
     cartData = await cart.get();

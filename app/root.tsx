@@ -16,6 +16,8 @@ import { Footer } from '~/components/common/Footer';
 import { MobileNav } from '~/components/common/MobileNav';
 import { CartDrawer } from '~/components/cart/CartDrawer';
 
+import { getHydrogenContext } from '~/lib/context.server';
+
 export const links = () => [
   { rel: 'stylesheet', href: appStyles },
   { rel: 'icon', type: 'image/svg+xml', href: '/favicon.svg' },
@@ -24,8 +26,8 @@ export const links = () => [
   { rel: 'preconnect', href: 'https://fonts.gstatic.com', crossOrigin: 'anonymous' },
 ];
 
-export async function loader({ context }: LoaderFunctionArgs) {
-  const { cart, session } = context;
+export async function loader({ context, request }: LoaderFunctionArgs) {
+  const { cart, session, env } = await getHydrogenContext(context, request);
   let cartData = null;
   try {
     cartData = await cart.get();
@@ -38,7 +40,7 @@ export async function loader({ context }: LoaderFunctionArgs) {
   return {
     cart: cartData,
     isLoggedIn: Boolean(customerAccessToken),
-    publicStoreDomain: context.env.PUBLIC_STORE_DOMAIN,
+    publicStoreDomain: env.PUBLIC_STORE_DOMAIN || '',
   };
 }
 

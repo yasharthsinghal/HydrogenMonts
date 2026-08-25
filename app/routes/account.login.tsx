@@ -40,10 +40,12 @@ export const meta: MetaFunction = () => [
   },
 ];
 
+import { getHydrogenContext } from '~/lib/context.server';
+
 // ─── Loader ───────────────────────────────────────────────────────────────────
 
 export async function loader({ context, request }: LoaderFunctionArgs) {
-  const { session } = context;
+  const { session } = await getHydrogenContext(context, request);
   const url = new URL(request.url);
   const returnTo = sanitizeRedirect(url.searchParams.get('return_to'), '/account');
 
@@ -63,8 +65,8 @@ export async function loader({ context, request }: LoaderFunctionArgs) {
 // ─── Action ───────────────────────────────────────────────────────────────────
 
 export async function action({ request, context }: ActionFunctionArgs) {
-  const { session, storefront, env } = context;
-  const sessionSecret = env.SESSION_SECRET;
+  const { session, storefront, env } = await getHydrogenContext(context, request);
+  const sessionSecret = env.SESSION_SECRET || 'monts-fallback-session-secret-key-32-chars-min';
   if (!sessionSecret) {
     throw new Error('[MONTS] SESSION_SECRET is required in environment for secure OTP hashing.');
   }

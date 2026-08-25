@@ -9,7 +9,7 @@ import type {
   createStorefrontClient,
   createCustomerAccountClient,
 } from '@shopify/hydrogen';
-import type { AppSession } from './server';
+import type { AppSession } from './app/lib/context.server';
 
 declare global {
   /**

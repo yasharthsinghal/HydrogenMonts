@@ -9,9 +9,12 @@ export const meta: MetaFunction = () => {
   ];
 };
 
-export async function loader({ context }: LoaderFunctionArgs) {
+import { getHydrogenContext } from '~/lib/context.server';
+
+export async function loader({ context, request }: LoaderFunctionArgs) {
+  const { env } = await getHydrogenContext(context, request);
   return {
-    storeDomain: context.env.PUBLIC_STORE_DOMAIN,
+    storeDomain: env.PUBLIC_STORE_DOMAIN || '',
   };
 }
 

@@ -1,8 +1,9 @@
 import { redirect, type ActionFunctionArgs, type LoaderFunctionArgs } from 'react-router';
 import { CUSTOMER_ACCESS_TOKEN_DELETE_MUTATION } from '~/graphql/StorefrontQueries';
+import { getHydrogenContext } from '~/lib/context.server';
 
-async function doLogout(context: any) {
-  const { session, storefront } = context;
+async function doLogout(context: any, request: Request) {
+  const { session, storefront } = await getHydrogenContext(context, request);
 
   // Best-effort: delete token on Shopify side
   const token = session.get('customerAccessToken');
@@ -27,10 +28,10 @@ async function doLogout(context: any) {
   });
 }
 
-export async function action({ context }: ActionFunctionArgs) {
-  return doLogout(context);
+export async function action({ context, request }: ActionFunctionArgs) {
+  return doLogout(context, request);
 }
 
-export async function loader({ context }: LoaderFunctionArgs) {
-  return doLogout(context);
+export async function loader({ context, request }: LoaderFunctionArgs) {
+  return doLogout(context, request);
 }

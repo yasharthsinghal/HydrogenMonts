@@ -1,4 +1,4 @@
-﻿import { redirect, useLoaderData, Link, type MetaFunction, type LoaderFunctionArgs } from 'react-router';
+import { redirect, useLoaderData, Link, type MetaFunction, type LoaderFunctionArgs } from 'react-router';
 import { Breadcrumb } from '~/components/ui/Breadcrumb';
 import { STOREFRONT_CUSTOMER_QUERY } from '~/graphql/StorefrontQueries';
 
@@ -6,9 +6,11 @@ export const meta: MetaFunction = () => [
   { title: 'Order Details | MONTS' },
 ];
 
-export async function loader({ params, context }: LoaderFunctionArgs) {
+import { getHydrogenContext } from '~/lib/context.server';
+
+export async function loader({ params, context, request }: LoaderFunctionArgs) {
   const { id } = params;
-  const { session, storefront } = context;
+  const { session, storefront } = await getHydrogenContext(context, request);
   const token = session.get('customerAccessToken');
 
   if (!token) {

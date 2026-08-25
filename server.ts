@@ -16,58 +16,8 @@ import {
 } from '@shopify/hydrogen';
 import { logger } from '~/utils/logger.server';
 
-/**
- * Standard Hydrogen cookie session wrapper implementing HydrogenSession interface.
- */
-export class AppSession {
-  public session: Session;
-  private sessionStorage: SessionStorage;
-
-  constructor(sessionStorage: SessionStorage, session: Session) {
-    this.sessionStorage = sessionStorage;
-    this.session = session;
-  }
-
-  static async init(request: Request, secrets: string[]) {
-    const storage = createCookieSessionStorage({
-      cookie: {
-        name: '__session',
-        httpOnly: true,
-        path: '/',
-        sameSite: 'lax',
-        secrets,
-        secure: process.env.NODE_ENV === 'production',
-      },
-    });
-
-    const session = await storage.getSession(request.headers.get('Cookie'));
-    return new this(storage, session);
-  }
-
-  has(key: string) {
-    return this.session.has(key);
-  }
-
-  get(key: string) {
-    return this.session.get(key);
-  }
-
-  destroy() {
-    return this.sessionStorage.destroySession(this.session);
-  }
-
-  unset(key: string) {
-    this.session.unset(key);
-  }
-
-  set(key: string, value: any) {
-    this.session.set(key, value);
-  }
-
-  commit() {
-    return this.sessionStorage.commitSession(this.session);
-  }
-}
+export { AppSession } from '~/lib/context.server';
+import { createHydrogenContext } from '~/lib/context.server';
 
 /**
  * Universal fetch handler for Node 22, Vercel, and Cloudflare environments.
@@ -80,74 +30,9 @@ export async function fetchHandler(
   const startTime = performance.now();
   const url = new URL(request.url);
 
-  // Normalize environment variables between Cloudflare/Oxygen and Node.js/Vercel
-  const env: Env = (
-    rawEnv && Object.keys(rawEnv).length > 0
-      ? rawEnv
-      : (process.env as unknown as Env)
-  ) || (process.env as unknown as Env);
-
-  const executionContext = rawExecutionContext || {
-    waitUntil: (p: Promise<unknown>) => {
-      p.catch((err) => console.error('[Background Task Error]', err));
-    },
-    passThroughOnException: () => {},
-  };
-
   try {
-    if (!env.SESSION_SECRET) {
-      throw new Error('[MONTS] SESSION_SECRET is not set in environment. Refusing to start with an insecure session.');
-    }
-
-    /**
-     * Open an isolated cookie-based session for the visitor.
-     */
-    const session = await AppSession.init(request, [env.SESSION_SECRET]);
-
-    /**
-     * Create Storefront Client.
-     */
-    const { storefront } = createStorefrontClient({
-      i18n: { language: 'EN', country: 'IN' },
-      publicStorefrontToken: env.PUBLIC_STOREFRONT_API_TOKEN,
-      privateStorefrontToken:
-        env.PRIVATE_STOREFRONT_API_TOKEN &&
-        env.PRIVATE_STOREFRONT_API_TOKEN.length > 20 &&
-        !env.PRIVATE_STOREFRONT_API_TOKEN.includes('your_')
-          ? env.PRIVATE_STOREFRONT_API_TOKEN
-          : undefined,
-      storeDomain: env.PUBLIC_STORE_DOMAIN,
-      storefrontId: env.PUBLIC_STOREFRONT_ID,
-    });
-
-    /**
-     * Create Customer Account API Client.
-     */
-    const customerAccountId =
-      env.PUBLIC_CUSTOMER_ACCOUNT_API_CLIENT_ID &&
-      !env.PUBLIC_CUSTOMER_ACCOUNT_API_CLIENT_ID.includes('your_')
-        ? env.PUBLIC_CUSTOMER_ACCOUNT_API_CLIENT_ID
-        : 'shp_c8a77f98-9d41-4770-9be0-128a8d167ef0';
-
-    const shopId = env.SHOP_ID || env.PUBLIC_STOREFRONT_ID || '';
-
-    const customerAccount = createCustomerAccountClient({
-      session: session as any,
-      customerAccountId,
-      shopId,
-      request,
-      waitUntil: (p: Promise<unknown>) => executionContext.waitUntil(p),
-    });
-
-    /**
-     * Create Hydrogen Cart Handler.
-     */
-    const cart = createCartHandler({
-      storefront,
-      customerAccount,
-      getCartId: cartGetIdDefault(request.headers),
-      setCartId: cartSetIdDefault(),
-    });
+    const context = await createHydrogenContext(request, rawEnv, rawExecutionContext);
+    const { session } = context;
 
     /**
      * Create React Router / Hydrogen Request Handler.
@@ -155,14 +40,7 @@ export async function fetchHandler(
     const handleRequest = createRequestHandler({
       build: reactRouterBuild,
       mode: process.env.NODE_ENV,
-      getLoadContext: () => ({
-        session,
-        storefront,
-        customerAccount,
-        cart,
-        env,
-        waitUntil: (p: Promise<unknown>) => executionContext.waitUntil(p),
-      }),
+      getLoadContext: () => context,
     });
 
     // Normalize host / x-forwarded-host headers for local loopback (localhost vs 127.0.0.1)

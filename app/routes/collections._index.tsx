@@ -15,8 +15,10 @@ export const meta: MetaFunction = () => {
   ];
 };
 
-export async function loader({ context }: LoaderFunctionArgs) {
-  const { storefront } = context;
+import { getHydrogenContext } from '~/lib/context.server';
+
+export async function loader({ context, request }: LoaderFunctionArgs) {
+  const { storefront } = await getHydrogenContext(context, request);
 
   let collections: CollectionCardItem[] = [];
   try {

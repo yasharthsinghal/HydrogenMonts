@@ -1,4 +1,4 @@
-﻿import { useLoaderData, type MetaFunction, type LoaderFunctionArgs } from 'react-router';
+import { useLoaderData, type MetaFunction, type LoaderFunctionArgs } from 'react-router';
 import { Breadcrumb } from '~/components/ui/Breadcrumb';
 
 const PAGE_QUERY = `#graphql
@@ -29,13 +29,15 @@ export const meta: MetaFunction<typeof loader> = ({ data }) => {
   ];
 };
 
-export async function loader({ params, context }: LoaderFunctionArgs) {
+import { getHydrogenContext } from '~/lib/context.server';
+
+export async function loader({ params, context, request }: LoaderFunctionArgs) {
   const { handle } = params;
   if (!handle) {
     throw new Response('Page handle is required', { status: 400 });
   }
 
-  const { storefront } = context;
+  const { storefront } = await getHydrogenContext(context, request);
   const data: any = await storefront.query(PAGE_QUERY, {
     variables: { handle },
   });

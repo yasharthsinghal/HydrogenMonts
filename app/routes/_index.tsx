@@ -25,8 +25,10 @@ export const meta: MetaFunction = () => {
   ];
 };
 
+import { getHydrogenContext } from '~/lib/context.server';
+
 export async function loader({ request, context }: LoaderFunctionArgs) {
-  const { storefront } = context;
+  const { storefront } = await getHydrogenContext(context, request);
   const url = new URL(request.url);
   const baseUrl = `${url.protocol}//${url.host}`;
 

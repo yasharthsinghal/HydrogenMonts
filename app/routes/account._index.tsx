@@ -14,8 +14,10 @@ export const meta: MetaFunction = () => [
   { name: 'description', content: 'Your orders, addresses and profile — all in one place.' },
 ];
 
-export async function loader({ context }: LoaderFunctionArgs) {
-  const { session, storefront, env } = context;
+import { getHydrogenContext } from '~/lib/context.server';
+
+export async function loader({ context, request }: LoaderFunctionArgs) {
+  const { session, storefront, env } = await getHydrogenContext(context, request);
 
   const customerEmail = session.get('customerEmail') as string | undefined;
   const customerAccessToken = session.get('customerAccessToken') as string | undefined;

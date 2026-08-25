@@ -1,8 +1,9 @@
 import { type LoaderFunctionArgs } from 'react-router';
 import { sanitizeRedirect } from '~/lib/redirect';
+import { getHydrogenContext } from '~/lib/context.server';
 
-export async function loader({ context }: LoaderFunctionArgs) {
-  const { customerAccount, session } = context;
+export async function loader({ context, request }: LoaderFunctionArgs) {
+  const { customerAccount, session } = await getHydrogenContext(context, request);
 
   // Complete OAuth exchange with Shopify Customer Account API
   const authorizeResponse = await customerAccount.authorize();
