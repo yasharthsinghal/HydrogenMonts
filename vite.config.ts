@@ -5,14 +5,16 @@ import { reactRouter } from '@react-router/dev/vite';
 import tsconfigPaths from 'vite-tsconfig-paths';
 import tailwindcss from '@tailwindcss/vite';
 
+const isVercel = process.env.VERCEL === '1' || process.env.BUILD_TARGET === 'vercel';
+
 export default defineConfig({
   plugins: [
     tailwindcss(),
     hydrogen(),
-    oxygen(),
+    !isVercel && oxygen(),
     reactRouter(),
     tsconfigPaths(),
-  ],
+  ].filter(Boolean),
   resolve: {
     dedupe: ['react', 'react-dom'],
   },

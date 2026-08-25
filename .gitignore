@@ -6,6 +6,8 @@ node_modules/
 dist/
 build/
 .cache/
+.vercel/
+.react-router/
 
 # Environment files
 .env

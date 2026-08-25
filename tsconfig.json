@@ -23,7 +23,6 @@
     },
     "noEmit": true,
     "types": [
-      "@shopify/remix-oxygen",
       "@shopify/oxygen-workers-types",
       "vite/client"
     ]
