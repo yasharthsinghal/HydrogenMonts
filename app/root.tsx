@@ -25,7 +25,7 @@ export const links: LinksFunction = () => [
 ];
 
 export async function loader({ context }: LoaderFunctionArgs) {
-  const { cart } = context;
+  const { cart, session } = context;
   let cartData = null;
   try {
     cartData = await cart.get();
@@ -33,8 +33,11 @@ export async function loader({ context }: LoaderFunctionArgs) {
     // Session cart fallback
   }
 
+  const customerAccessToken = session.get('customerAccessToken');
+
   return json({
     cart: cartData,
+    isLoggedIn: Boolean(customerAccessToken),
     publicStoreDomain: context.env.PUBLIC_STORE_DOMAIN,
   });
 }
@@ -43,13 +46,6 @@ export function Layout({ children }: { children?: React.ReactNode }) {
   const data = useRouteLoaderData<typeof loader>('root');
   const cart = data?.cart;
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
-  const [cartDrawerOpen, setCartDrawerOpen] = useState(false);
-
-  useEffect(() => {
-    const handleOpenCart = () => setCartDrawerOpen(true);
-    window.addEventListener('open-cart', handleOpenCart);
-    return () => window.removeEventListener('open-cart', handleOpenCart);
-  }, []);
 
   return (
     <html lang="en" suppressHydrationWarning>
@@ -66,7 +62,6 @@ export function Layout({ children }: { children?: React.ReactNode }) {
         <Header
           cartCount={cart?.totalQuantity ?? 0}
           onOpenMobileNav={() => setMobileNavOpen(true)}
-          onOpenCart={() => setCartDrawerOpen(true)}
         />
 
         <main className="flex-1">
@@ -78,12 +73,6 @@ export function Layout({ children }: { children?: React.ReactNode }) {
         <MobileNav
           isOpen={mobileNavOpen}
           onClose={() => setMobileNavOpen(false)}
-        />
-
-        <CartDrawer
-          isOpen={cartDrawerOpen}
-          onClose={() => setCartDrawerOpen(false)}
-          cart={cart}
         />
 
         <ScrollRestoration />

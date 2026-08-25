@@ -1,5 +1,5 @@
 import { json, type LoaderFunctionArgs } from "@shopify/remix-oxygen";
-import { useLoaderData, useFetcher, type MetaFunction } from "@remix-run/react";
+import { useLoaderData, useFetcher, useNavigate, type MetaFunction } from "@remix-run/react";
 import { useState, useEffect } from "react";
 import {
     PRODUCT_BY_HANDLE_QUERY,
@@ -90,6 +90,7 @@ export default function ProductDetailRoute() {
     const { product, recommendedProducts, canonicalUrl } =
         useLoaderData<typeof loader>();
 
+    const navigate = useNavigate();
     const variants = product.variants?.nodes || [];
     const [selectedVariant, setSelectedVariant] = useState<ProductVariantNode>(
         variants[0] || ({} as ProductVariantNode),
@@ -99,21 +100,30 @@ export default function ProductDetailRoute() {
     const [addingToCart, setAddingToCart] = useState(false);
     const [isBuyingNow, setIsBuyingNow] = useState(false);
 
-    const cartFetcher = useFetcher<{ cart?: { checkoutUrl?: string; id?: string; totalQuantity?: number } }>();
+    const cartFetcher = useFetcher<{ cart?: { checkoutUrl?: string; id?: string; totalQuantity?: number }; error?: string }>();
+    const isSubmitting = cartFetcher.state !== "idle";
+    const isPending = isSubmitting || addingToCart || isBuyingNow;
 
     useEffect(() => {
-        if (cartFetcher.state === "idle" && cartFetcher.data) {
-            if (isBuyingNow) {
-                if (cartFetcher.data.cart?.checkoutUrl) {
-                    window.location.href = cartFetcher.data.cart.checkoutUrl;
-                } else {
-                    window.location.href = "/cart";
+        if (cartFetcher.state === "idle") {
+            if (cartFetcher.data) {
+                if (cartFetcher.data.error) {
+                    console.error("Cart error:", cartFetcher.data.error);
+                    setAddingToCart(false);
+                    setIsBuyingNow(false);
+                } else if (isBuyingNow) {
+                    setIsBuyingNow(false);
+                    navigate("/checkout");
+                } else if (addingToCart) {
+                    setAddingToCart(false);
+                    navigate("/cart");
                 }
-            } else if (addingToCart) {
+            } else if (addingToCart || isBuyingNow) {
                 setAddingToCart(false);
+                setIsBuyingNow(false);
             }
         }
-    }, [cartFetcher.state, cartFetcher.data, isBuyingNow, addingToCart]);
+    }, [cartFetcher.state, cartFetcher.data, isBuyingNow, addingToCart, navigate]);
 
     const images = (product.media?.nodes
         ?.map((m) => m.image?.url)
@@ -142,7 +152,7 @@ export default function ProductDetailRoute() {
     };
 
     const handleAddToCart = () => {
-        if (!selectedVariant?.id || addingToCart || isBuyingNow) return;
+        if (!selectedVariant?.id || !isAvailable || isSubmitting) return;
         setAddingToCart(true);
 
         const formData = new FormData();
@@ -165,7 +175,7 @@ export default function ProductDetailRoute() {
     };
 
     const handleBuyNow = () => {
-        if (!selectedVariant?.id || !isAvailable || isBuyingNow || addingToCart) return;
+        if (!selectedVariant?.id || !isAvailable || isSubmitting) return;
         setIsBuyingNow(true);
 
         const formData = new FormData();
@@ -256,7 +266,7 @@ export default function ProductDetailRoute() {
     ];
 
     return (
-        <div className='max-w-[1400px] mx-auto px-6 md:px-12 py-10'>
+        <div className='max-w-[1400px] mx-auto px-6 md:px-12 py-10 pb-28 md:pb-16'>
             {/* Product JSON-LD */}
             <script
                 type='application/ld+json'
@@ -422,59 +432,86 @@ export default function ProductDetailRoute() {
                             </div>
                         )}
 
-                    {/* Quantity & Add to Cart / Buy Now */}
-                    <div className='flex flex-col gap-3 pt-2'>
-                        <span className='text-xs font-semibold text-[#060505]'>
-                            Quantity
-                        </span>
-                        <div className='flex items-center gap-4'>
+                    {/* Quantity & Actions */}
+                    <div className='flex flex-col gap-4 pt-2'>
+                        <div className='flex items-center justify-between'>
+                            <span className='text-xs font-semibold text-[#060505]'>
+                                Quantity
+                            </span>
                             <div className='flex items-center border border-[#e8e4df] rounded-[6px] bg-[#faf8f5]'>
                                 <button
                                     type='button'
                                     onClick={() =>
                                         setQuantity((q) => Math.max(1, q - 1))
                                     }
-                                    className='p-3 text-[#686764] hover:text-[#060505] cursor-pointer'
+                                    className='p-2.5 text-[#686764] hover:text-[#060505] cursor-pointer'
                                     aria-label='Decrease quantity'>
                                     <Minus className='w-3.5 h-3.5' />
                                 </button>
-                                <span className='px-4 text-sm font-semibold text-[#060505] min-w-[36px] text-center'>
+                                <span className='px-3 text-sm font-semibold text-[#060505] min-w-[32px] text-center'>
                                     {quantity}
                                 </span>
                                 <button
                                     type='button'
                                     onClick={() => setQuantity((q) => q + 1)}
-                                    className='p-3 text-[#686764] hover:text-[#060505] cursor-pointer'
+                                    className='p-2.5 text-[#686764] hover:text-[#060505] cursor-pointer'
                                     aria-label='Increase quantity'>
                                     <Plus className='w-3.5 h-3.5' />
                                 </button>
                             </div>
+                        </div>
 
+                        {/* Desktop 2-Column Action Buttons */}
+                        <div className='hidden md:grid grid-cols-2 gap-3 pt-1'>
                             <Button
                                 variant='outline'
                                 size='lg'
-                                className='flex-1 text-sm font-semibold flex items-center justify-center gap-2 border-[#1a1a1a] text-[#1a1a1a] hover:bg-[#1a1a1a] hover:text-white transition-colors'
+                                className='w-full text-sm font-semibold flex items-center justify-center gap-2 border-[#1a1a1a] text-[#1a1a1a] hover:bg-[#1a1a1a] hover:text-white transition-colors h-12'
                                 onClick={handleAddToCart}
-                                disabled={
-                                    !isAvailable || addingToCart || isBuyingNow
-                                }
-                                isLoading={addingToCart}>
+                                disabled={!isAvailable || isPending}
+                                isLoading={addingToCart && isPending}>
                                 <ShoppingBag className='w-4 h-4' />
-                                {isAvailable ? "Add to Bag" : "Sold Out"}
+                                {isAvailable ? (addingToCart ? "Adding..." : "Add to Bag") : "Sold Out"}
                             </Button>
-                        </div>
 
-                        {/* Express Buy Now Button */}
+                            {isAvailable && (
+                                <Button
+                                    variant='primary'
+                                    size='lg'
+                                    className='w-full text-sm font-semibold flex items-center justify-center gap-2 bg-[#c4622d] hover:bg-[#923f12] text-white shadow-sm h-12'
+                                    onClick={handleBuyNow}
+                                    disabled={!isAvailable || isPending}
+                                    isLoading={isBuyingNow && isPending}>
+                                    <Zap className='w-4 h-4 fill-current' />
+                                    <span>{isBuyingNow ? "Preparing..." : "Buy Now"}</span>
+                                </Button>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* Flipkart-Style Mobile Fixed Bottom Action Bar */}
+                    <div className='md:hidden fixed bottom-0 left-0 right-0 z-40 bg-[#faf8f5]/95 backdrop-blur-md border-t border-[#e8e4df] p-3 px-4 shadow-[0_-4px_20px_rgba(0,0,0,0.08)] flex items-center gap-3'>
+                        <Button
+                            variant='outline'
+                            size='lg'
+                            className='flex-1 text-sm font-semibold flex items-center justify-center gap-2 border-[#1a1a1a] text-[#1a1a1a] bg-white hover:bg-[#1a1a1a] hover:text-white transition-colors h-12'
+                            onClick={handleAddToCart}
+                            disabled={!isAvailable || isPending}
+                            isLoading={addingToCart && isPending}>
+                            <ShoppingBag className='w-4 h-4' />
+                            {isAvailable ? (addingToCart ? "Adding..." : "Add to Bag") : "Sold Out"}
+                        </Button>
+
                         {isAvailable && (
                             <Button
                                 variant='primary'
                                 size='lg'
-                                className='w-full text-sm font-semibold flex items-center justify-center gap-2 bg-[#c4622d] hover:bg-[#923f12] text-white shadow-sm'
+                                className='flex-1 text-sm font-semibold flex items-center justify-center gap-2 bg-[#c4622d] hover:bg-[#923f12] text-white shadow-sm h-12'
                                 onClick={handleBuyNow}
-                                disabled={isBuyingNow || addingToCart}
-                                isLoading={isBuyingNow}>
+                                disabled={!isAvailable || isPending}
+                                isLoading={isBuyingNow && isPending}>
                                 <Zap className='w-4 h-4 fill-current' />
-                                <span>Buy Now with CCAvenue</span>
+                                <span>{isBuyingNow ? "Preparing..." : "Buy Now"}</span>
                             </Button>
                         )}
                     </div>

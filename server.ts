@@ -110,10 +110,22 @@ export default {
       /**
        * Create Customer Account API Client.
        */
+      const cleanCustomerAccountUrl = (
+        env.PUBLIC_CUSTOMER_ACCOUNT_API_URL || 'https://shopify.com/47751d'
+      )
+        .replace(/\/auth\/?$/, '')
+        .replace(/\/account\/?$/, '');
+
+      const cleanCustomerAccountId =
+        env.PUBLIC_CUSTOMER_ACCOUNT_API_CLIENT_ID &&
+        !env.PUBLIC_CUSTOMER_ACCOUNT_API_CLIENT_ID.includes('your_')
+          ? env.PUBLIC_CUSTOMER_ACCOUNT_API_CLIENT_ID
+          : 'shp_c8a77f98-9d41-4770-9be0-128a8d167ef0';
+
       const customerAccount = createCustomerAccountClient({
         session: session as any,
-        customerAccountId: env.PUBLIC_CUSTOMER_ACCOUNT_API_CLIENT_ID,
-        customerAccountUrl: env.PUBLIC_CUSTOMER_ACCOUNT_API_URL,
+        customerAccountId: cleanCustomerAccountId,
+        customerAccountUrl: cleanCustomerAccountUrl,
         request,
       });
 
@@ -134,7 +146,7 @@ export default {
         build: remixBuild,
         mode: process.env.NODE_ENV,
         getLoadContext: () => ({
-          session: session.session,
+          session,
           storefront,
           customerAccount,
           cart,
@@ -176,7 +188,12 @@ export default {
 
       const response = await handleRequest(req);
 
-      if (session.has('cartId') || session.has('customerAccessToken')) {
+      if (
+        session.has('cartId') ||
+        session.has('customerAccessToken') ||
+        session.has('customerEmail') ||
+        session.has('otpData')
+      ) {
         response.headers.append('Set-Cookie', await session.commit());
       }
 

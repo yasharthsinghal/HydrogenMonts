@@ -180,3 +180,132 @@ export const SEARCH_QUERY = `#graphql
   ${IMAGE_FRAGMENT}
   ${MONEY_FRAGMENT}
 ` as const;
+
+export const CUSTOMER_ACCESS_TOKEN_CREATE_MUTATION = `#graphql
+  mutation CustomerAccessTokenCreate($input: CustomerAccessTokenCreateInput!) {
+    customerAccessTokenCreate(input: $input) {
+      customerAccessToken {
+        accessToken
+        expiresAt
+      }
+      customerUserErrors {
+        code
+        field
+        message
+      }
+    }
+  }
+` as const;
+
+export const CUSTOMER_CREATE_MUTATION = `#graphql
+  mutation CustomerCreate($input: CustomerCreateInput!) {
+    customerCreate(input: $input) {
+      customer {
+        id
+        email
+        firstName
+        lastName
+      }
+      customerUserErrors {
+        code
+        field
+        message
+      }
+    }
+  }
+` as const;
+
+export const CUSTOMER_RECOVER_MUTATION = `#graphql
+  mutation CustomerRecover($email: String!) {
+    customerRecover(email: $email) {
+      customerUserErrors {
+        code
+        field
+        message
+      }
+    }
+  }
+` as const;
+
+export const CUSTOMER_ACCESS_TOKEN_DELETE_MUTATION = `#graphql
+  mutation CustomerAccessTokenDelete($customerAccessToken: String!) {
+    customerAccessTokenDelete(customerAccessToken: $customerAccessToken) {
+      deletedAccessToken
+      deletedCustomerAccessTokenId
+      userErrors {
+        field
+        message
+      }
+    }
+  }
+` as const;
+
+export const STOREFRONT_CUSTOMER_QUERY = `#graphql
+  query StorefrontCustomer($customerAccessToken: String!) {
+    customer(customerAccessToken: $customerAccessToken) {
+      id
+      firstName
+      lastName
+      email
+      phone
+      numberOfOrders
+      defaultAddress {
+        id
+        formatted
+        address1
+        address2
+        city
+        province
+        zip
+        country
+        phone
+      }
+      addresses(first: 10) {
+        nodes {
+          id
+          formatted
+          address1
+          address2
+          city
+          province
+          zip
+          country
+          phone
+        }
+      }
+      orders(first: 20, sortKey: PROCESSED_AT, reverse: true) {
+        nodes {
+          id
+          orderNumber
+          name
+          processedAt
+          financialStatus
+          fulfillmentStatus
+          totalPrice {
+            amount
+            currencyCode
+          }
+          lineItems(first: 10) {
+            nodes {
+              title
+              quantity
+              variant {
+                title
+                image {
+                  url
+                  altText
+                }
+                price {
+                  amount
+                  currencyCode
+                }
+              }
+            }
+          }
+          statusUrl
+        }
+      }
+    }
+  }
+` as const;
+

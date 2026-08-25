@@ -23,6 +23,27 @@ declare global {
     PUBLIC_STOREFRONT_ID?: string;
     PUBLIC_CUSTOMER_ACCOUNT_API_CLIENT_ID: string;
     PUBLIC_CUSTOMER_ACCOUNT_API_URL: string;
+
+    // Shopify Admin API (Dynamic Client Credentials or Static Token)
+    SHOPIFY_ADMIN_API_TOKEN?: string;
+    SHOPIFY_ADMIN_CLIENT_ID?: string;
+    SHOPIFY_ADMIN_CLIENT_SECRET?: string;
+
+    // OTP Provider Selection & Feature Flags
+    OTP_EMAIL_PROVIDER?: 'smtp' | 'google_smtp' | 'resend' | 'auto';
+    ENABLE_GOOGLE_SMTP?: string; // "true" | "false"
+    ENABLE_RESEND?: string; // "true" | "false"
+
+    // Google SMTP Credentials
+    SMTP_HOST?: string;
+    SMTP_PORT?: string;
+    SMTP_USER?: string;
+    SMTP_PASS?: string;
+    SMTP_FROM?: string;
+
+    // Resend Credentials
+    RESEND_API_KEY?: string;
+    RESEND_FROM_EMAIL?: string;
   }
 
   /**

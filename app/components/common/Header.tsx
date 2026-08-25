@@ -91,16 +91,10 @@ export const Header: React.FC<HeaderProps> = ({
               <User className="w-5 h-5" />
             </Link>
 
-            {/* Cart Trigger */}
+            {/* Cart Link (Full Page) */}
             <Link
               to="/cart"
-              onClick={(e) => {
-                if (onOpenCart) {
-                  e.preventDefault();
-                  onOpenCart();
-                }
-              }}
-              className="relative flex items-center gap-2 px-3 py-2 text-xs font-semibold rounded-[6px] bg-[#c4622d] text-white hover:bg-[#923f12] transition-colors cursor-pointer"
+              className="relative flex items-center gap-2 px-3.5 py-2 text-xs font-semibold rounded-[6px] bg-[#c4622d] text-white hover:bg-[#923f12] transition-colors cursor-pointer"
               aria-label="Shopping Cart"
             >
               <ShoppingBag className="w-4 h-4" />

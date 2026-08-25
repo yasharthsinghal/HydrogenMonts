@@ -206,32 +206,16 @@ export default function CartRoute() {
               </span>
             </div>
 
-            {cart?.checkoutUrl ? (
-              <a href={cart.checkoutUrl} onClick={handleCheckout} className="w-full">
-                <Button
-                  variant="primary"
-                  size="lg"
-                  disabled={isRedirecting}
-                  className="w-full flex items-center justify-center gap-2"
-                >
-                  {isRedirecting ? (
-                    <>
-                      <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                      <span>Redirecting to Checkout...</span>
-                    </>
-                  ) : (
-                    <>
-                      <span>Proceed to Checkout</span>
-                      <ArrowRight className="w-4 h-4" />
-                    </>
-                  )}
-                </Button>
-              </a>
-            ) : (
-              <Button variant="primary" size="lg" className="w-full" disabled>
-                Checkout Unavailable
+            <Link to="/checkout" className="w-full">
+              <Button
+                variant="primary"
+                size="lg"
+                className="w-full flex items-center justify-center gap-2 cursor-pointer"
+              >
+                <span>Proceed to Checkout</span>
+                <ArrowRight className="w-4 h-4" />
               </Button>
-            )}
+            </Link>
 
             <p className="text-xs text-[#686764] text-center leading-relaxed">
               Dispatched with care from our Jaipur studio in 24–48 hours.
