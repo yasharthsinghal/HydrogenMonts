@@ -13,6 +13,12 @@ export interface BreadcrumbProps {
 }
 
 export const Breadcrumb: React.FC<BreadcrumbProps> = ({ items, className = '' }) => {
+  // If the caller already included "Home" as the first item, deduplicate it so "Home > Home" never happens
+  const filteredItems =
+    items.length > 0 && (items[0].label.toLowerCase() === 'home' || items[0].href === '/')
+      ? items.slice(1)
+      : items;
+
   return (
     <nav
       aria-label="Breadcrumb"
@@ -22,8 +28,8 @@ export const Breadcrumb: React.FC<BreadcrumbProps> = ({ items, className = '' })
       <Link to="/" className="hover:text-[#c4622d] transition-colors">
         Home
       </Link>
-      {items.map((item, index) => {
-        const isLast = index === items.length - 1;
+      {filteredItems.map((item, index) => {
+        const isLast = index === filteredItems.length - 1;
         return (
           <React.Fragment key={index}>
             <ChevronRight className="w-3.5 h-3.5 text-[#afaba6] shrink-0" />

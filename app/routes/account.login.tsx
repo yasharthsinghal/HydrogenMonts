@@ -245,7 +245,7 @@ export default function LoginPage() {
     >
       <div className="w-full max-w-md">
         <Breadcrumb
-          items={[{ label: 'Home', href: '/' }, { label: 'Account' }]}
+          items={[{ label: 'Account' }]}
           className="mb-8 justify-center"
         />
 
