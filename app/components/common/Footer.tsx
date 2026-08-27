@@ -221,19 +221,6 @@ export const Footer: React.FC = () => {
             </div>
           </div>
 
-          {/* Payment Badges Row */}
-          <div className="pt-8 flex flex-wrap items-center justify-between gap-4">
-            <div className="flex flex-wrap items-center gap-2 text-xs text-white/70">
-              <span className="font-semibold text-white/90 mr-1">Accepted Payments:</span>
-              <span className="px-2.5 py-1 bg-white/10 rounded text-[11px] font-medium tracking-wide">PhonePe</span>
-              <span className="px-2.5 py-1 bg-white/10 rounded text-[11px] font-medium tracking-wide">GPay</span>
-              <span className="px-2.5 py-1 bg-white/10 rounded text-[11px] font-medium tracking-wide">Paytm</span>
-              <span className="px-2.5 py-1 bg-white/10 rounded text-[11px] font-medium tracking-wide">UPI</span>
-              <span className="px-2.5 py-1 bg-white/10 rounded text-[11px] font-medium tracking-wide">RuPay</span>
-              <span className="px-2.5 py-1 bg-white/10 rounded text-[11px] font-medium tracking-wide">Mastercard</span>
-              <span className="px-2.5 py-1 bg-white/10 rounded text-[11px] font-medium tracking-wide">VISA</span>
-            </div>
-          </div>
         </div>
       </div>
 

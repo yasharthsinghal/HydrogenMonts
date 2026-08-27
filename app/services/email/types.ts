@@ -3,6 +3,15 @@ export interface SendOtpOptions {
   code: string;
 }
 
+export interface SendOrderConfirmationOptions {
+  to: string;
+  orderName: string;
+  customerName: string;
+  paymentMethod: 'COD' | 'PREPAID';
+  totalAmount?: string;
+  items?: Array<{ title: string; quantity: number; price?: string }>;
+}
+
 export interface EmailProviderResult {
   success: boolean;
   provider: 'resend' | 'google_smtp' | 'console_dev';
@@ -63,7 +72,77 @@ export function generateOtpEmailHtml(code: string): string {
       </td>
     </tr>
   </table>
+ </body>
+</html>
+  `.trim();
+}
+
+export function generateOrderConfirmationHtml(options: SendOrderConfirmationOptions): string {
+  const isCod = options.paymentMethod === 'COD';
+  const paymentBadge = isCod ? 'Cash on Delivery (Payment Pending)' : 'Prepaid (Paid Online)';
+  const paymentInstructions = isCod
+    ? 'Please keep the exact cash amount ready upon delivery. Our studio concierge will contact you prior to dispatch.'
+    : 'Your payment was successfully received. Your handcrafted piece is being packaged in our Jaipur studio.';
+
+  return `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Your MONTS Order Confirmation ${options.orderName}</title>
+</head>
+<body style="background:#f5f0e8;margin:0;padding:40px 20px;font-family:'DM Sans',Helvetica,Arial,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0">
+    <tr>
+      <td align="center">
+        <table width="520" cellpadding="0" cellspacing="0" style="background:#faf8f5;border-radius:8px;border:1px solid #e8e4df;overflow:hidden;">
+          <!-- Header -->
+          <tr>
+            <td style="background:#060505;padding:28px 32px;">
+              <p style="margin:0;color:#c4622d;font-size:11px;letter-spacing:0.2em;text-transform:uppercase;font-weight:600;">MONTS ARTISANAL LUXURY</p>
+              <p style="margin:6px 0 0;color:#faf8f5;font-size:22px;font-weight:700;font-family:Georgia,serif;">Order Confirmed: ${options.orderName}</p>
+            </td>
+          </tr>
+          <!-- Body -->
+          <tr>
+            <td style="padding:32px;">
+              <p style="margin:0 0 16px;color:#060505;font-size:16px;font-weight:600;">
+                Dear ${options.customerName || 'Valued Customer'},
+              </p>
+              <p style="margin:0 0 20px;color:#686764;font-size:14px;line-height:1.6;">
+                Thank you for choosing MONTS. Your artisanal order <strong>${options.orderName}</strong> has been successfully placed.
+              </p>
+
+              <!-- Status Box -->
+              <div style="background:#f5f0e8;border-left:4px solid #c4622d;border-radius:4px;padding:16px 20px;margin:20px 0;">
+                <p style="margin:0;font-size:12px;text-transform:uppercase;letter-spacing:0.1em;font-weight:700;color:#8b7355;">Payment Method</p>
+                <p style="margin:4px 0 0;font-size:15px;font-weight:700;color:#060505;">${paymentBadge}</p>
+                <p style="margin:8px 0 0;font-size:13px;color:#686764;line-height:1.5;">${paymentInstructions}</p>
+              </div>
+
+              <!-- Dispatch note -->
+              <p style="margin:20px 0 0;color:#8b7355;font-size:12px;line-height:1.6;">
+                📍 Dispatches with care from our Jaipur studio in 24–48 hours with insured tracking.
+              </p>
+            </td>
+          </tr>
+          <!-- Footer -->
+          <tr>
+            <td style="background:#e8e4df;padding:20px 32px;text-align:center;">
+              <p style="margin:0;color:#8b7355;font-size:12px;">
+                Concierge Assistance: <a href="tel:+918290985337" style="color:#c4622d;text-decoration:none;">+91 - 8290985337</a> | <a href="mailto:vastrabymonty@gmail.com" style="color:#c4622d;text-decoration:none;">vastrabymonty@gmail.com</a>
+              </p>
+              <p style="margin:8px 0 0;color:#8b7355;font-size:11px;">
+                © MONTS — Jaipur, Rajasthan. Artisan Luxury.
+              </p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
 </body>
 </html>
   `.trim();
 }
+

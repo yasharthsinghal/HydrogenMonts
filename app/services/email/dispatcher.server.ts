@@ -1,6 +1,6 @@
 import { ResendEmailProvider } from './resend.server';
 import { GoogleSmtpEmailProvider } from './smtp.server';
-import type { SendOtpOptions, EmailProviderResult } from './types';
+import type { SendOtpOptions, SendOrderConfirmationOptions, EmailProviderResult } from './types';
 
 const resendProvider = new ResendEmailProvider();
 const smtpProvider = new GoogleSmtpEmailProvider();
@@ -50,3 +50,41 @@ export async function dispatchOtpEmail(
     provider: 'console_dev',
   };
 }
+
+export async function dispatchOrderConfirmationEmail(
+  options: SendOrderConfirmationOptions,
+  env: Env,
+): Promise<EmailProviderResult> {
+  const isGoogleSmtpEnabled =
+    env.ENABLE_GOOGLE_SMTP === 'true' ||
+    env.OTP_EMAIL_PROVIDER === 'smtp' ||
+    env.OTP_EMAIL_PROVIDER === 'google_smtp';
+
+  const isResendEnabled =
+    env.ENABLE_RESEND === 'true' || env.OTP_EMAIL_PROVIDER === 'resend';
+
+  console.info(`[Email Dispatcher - Order Confirmation] Order: ${options.orderName} | Target: ${options.to}`);
+
+  if (isGoogleSmtpEnabled) {
+    const smtpResult = await smtpProvider.sendOrderConfirmation(options, env);
+    if (smtpResult.success) return smtpResult;
+  }
+
+  if (isResendEnabled || (!isGoogleSmtpEnabled && env.RESEND_API_KEY && !env.RESEND_API_KEY.includes('PASTE_YOUR'))) {
+    const resendResult = await resendProvider.sendOrderConfirmation(options, env);
+    if (resendResult.success) return resendResult;
+  }
+
+  console.info(`\n======================================================`);
+  console.info(`📦 [MONTS ORDER CONFIRMATION — Development Mode]`);
+  console.info(`📧 Target: ${options.to}`);
+  console.info(`🏷️  Order: ${options.orderName}`);
+  console.info(`💳 Payment: ${options.paymentMethod}`);
+  console.info(`======================================================\n`);
+
+  return {
+    success: true,
+    provider: 'console_dev',
+  };
+}
+
