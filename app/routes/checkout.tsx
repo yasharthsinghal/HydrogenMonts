@@ -10,8 +10,11 @@ import {
   type ActionFunctionArgs,
   type LoaderFunctionArgs,
 } from 'react-router';
+import { useState } from 'react';
 import { CUSTOMER_DETAILS_QUERY } from '~/graphql/CustomerAccountQueries';
 import { shopifyCustomerService } from '~/services/shopify/customer.server';
+import { locationService } from '~/services/location/location.server';
+import { IndianAddressFields } from '~/components/address/IndianAddressFields';
 import { Button } from '~/components/ui/Button';
 import { Input } from '~/components/ui/Input';
 import { Breadcrumb } from '~/components/ui/Breadcrumb';
@@ -95,6 +98,17 @@ export async function action({ request, context }: ActionFunctionArgs) {
     return data({ error: 'Please fill in all required contact and delivery address fields.' }, { status: 400 });
   }
 
+  // 2b. Server-Side Location Consistency Verification (Pincode + City + State)
+  const isConsistent = await locationService.validateConsistency(zip, city, province);
+  if (!isConsistent) {
+    return data(
+      {
+        error: `Inconsistent delivery location: Pincode "${zip}" does not match "${city}, ${province}". Please check your address details.`,
+      },
+      { status: 400 },
+    );
+  }
+
   // 3. Update Shopify Cart Buyer Identity and Delivery Address
   try {
     await cart.updateBuyerIdentity({
@@ -138,6 +152,9 @@ export default function CheckoutPage() {
   const isSubmitting = navigation.state === 'submitting';
 
   const defaultAddr = customer?.defaultAddress || {};
+  const [isLocationValid, setIsLocationValid] = useState(() => {
+    return Boolean(defaultAddr.zip && defaultAddr.city && (defaultAddr.province || defaultAddr.zoneCode));
+  });
   const customerEmail = customer?.emailAddress?.emailAddress || customer?.email || '';
   const customerPhone = customer?.phoneNumber?.phoneNumber || defaultAddr?.phoneNumber || '';
 
@@ -173,7 +190,6 @@ export default function CheckoutPage() {
       <div className="max-w-[1280px] mx-auto">
         <Breadcrumb
           items={[
-            { label: 'Home', href: '/' },
             { label: 'Cart', href: '/cart' },
             { label: 'Delivery & Checkout' },
           ]}
@@ -282,32 +298,12 @@ export default function CheckoutPage() {
                     placeholder="e.g. Near City Center Mall"
                   />
 
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                    <Input
-                      label="City"
-                      name="city"
-                      type="text"
-                      required
-                      defaultValue={defaultAddr.city || ''}
-                      placeholder="e.g. Mumbai"
-                    />
-                    <Input
-                      label="State / Province"
-                      name="province"
-                      type="text"
-                      required
-                      defaultValue={defaultAddr.zoneCode || ''}
-                      placeholder="e.g. Maharashtra"
-                    />
-                    <Input
-                      label="PIN / Postal Code"
-                      name="zip"
-                      type="text"
-                      required
-                      defaultValue={defaultAddr.zip || ''}
-                      placeholder="e.g. 400001"
-                    />
-                  </div>
+                  <IndianAddressFields
+                    initialPincode={defaultAddr.zip || ''}
+                    initialCity={defaultAddr.city || ''}
+                    initialState={defaultAddr.province || defaultAddr.zoneCode || ''}
+                    onValidityChange={setIsLocationValid}
+                  />
                 </div>
 
                 <div className="pt-6 border-t border-[#e8e4df]">
@@ -315,11 +311,17 @@ export default function CheckoutPage() {
                     type="submit"
                     variant="primary"
                     size="lg"
-                    className="w-full h-14 text-sm font-semibold flex items-center justify-center gap-2 bg-[#c4622d] hover:bg-[#923f12] text-white shadow-md cursor-pointer"
-                    disabled={isSubmitting}
+                    className="w-full h-14 text-sm font-semibold flex items-center justify-center gap-2 bg-[#c4622d] hover:bg-[#923f12] text-white shadow-md cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                    disabled={isSubmitting || !isLocationValid}
                     isLoading={isSubmitting}
                   >
-                    <span>{isSubmitting ? 'Redirecting to Payment Gateway...' : 'Proceed to Payment (CCAvenue / COD)'}</span>
+                    <span>
+                      {isSubmitting
+                        ? 'Redirecting to Payment Gateway...'
+                        : !isLocationValid
+                        ? 'Verify Pincode & City to Proceed'
+                        : 'Proceed to Payment (CCAvenue / COD)'}
+                    </span>
                     <ArrowRight className="w-4 h-4" />
                   </Button>
 

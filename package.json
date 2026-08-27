@@ -9,7 +9,8 @@
     "build:oxygen": "shopify hydrogen build",
     "preview": "shopify hydrogen preview",
     "typecheck": "tsc",
-    "test:apis": "node scripts/test-apis.mjs"
+    "test:apis": "node scripts/test-apis.mjs",
+    "test:location": "npx tsx scripts/test-location-service.mjs"
   },
   "dependencies": {
     "@shopify/cli": "^3.70.0",
