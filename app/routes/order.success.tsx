@@ -235,7 +235,7 @@ export default function OrderSuccessRoute() {
 
         <div className="flex items-center justify-center gap-2 text-xs text-[#686764] pt-4">
           <ShieldCheck className="w-4 h-4 text-[#8b7355]" />
-          <span>Need help with this order? Contact concierge at support@monts.in</span>
+          <span>Need help with this order? Contact concierge at vastrabymonty@gmail.com or +91 - 8290985337</span>
         </div>
       </div>
     </div>

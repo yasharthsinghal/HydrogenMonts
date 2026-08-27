@@ -44,7 +44,7 @@ export default function FAQRoute() {
       title: 'What is your return & exchange policy?',
       content: (
         <p>
-          We offer a 30-day return policy for unwashed, unused products in original packaging with tags intact. Simply reach out to our concierge team at care@montsindia.com with your order number to initiate a return.
+          We offer a 30-day return policy for unwashed, unused products in original packaging with tags intact. Simply reach out to our concierge team at vastrabymonty@gmail.com or via WhatsApp at +91 - 8290985337 with your order number to initiate a return.
         </p>
       ),
     },

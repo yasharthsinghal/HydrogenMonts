@@ -96,13 +96,13 @@ export default function ThankYouRoute() {
         <div className="mt-12 pt-8 border-t border-[#e8e4df] w-full flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-[#686764]">
           <span>Need help with your order?</span>
           <div className="flex items-center gap-6">
-            <a href="tel:+919876543210" className="flex items-center gap-1.5 hover:text-[#c4622d] transition-colors">
+            <a href="tel:+918290985337" className="flex items-center gap-1.5 hover:text-[#c4622d] transition-colors">
               <Phone className="w-3.5 h-3.5" />
-              <span>+91 (0) 141 234 5678</span>
+              <span>+91 - 8290985337</span>
             </a>
-            <a href="mailto:care@monts.in" className="flex items-center gap-1.5 hover:text-[#c4622d] transition-colors">
+            <a href="mailto:vastrabymonty@gmail.com" className="flex items-center gap-1.5 hover:text-[#c4622d] transition-colors">
               <Mail className="w-3.5 h-3.5" />
-              <span>care@monts.in</span>
+              <span>vastrabymonty@gmail.com</span>
             </a>
           </div>
         </div>
