@@ -1,6 +1,8 @@
-import { Link, useSearchParams, type MetaFunction, type LoaderFunctionArgs } from 'react-router';
-import { CheckCircle2, ShoppingBag, ArrowRight, ShieldCheck, Truck, Clock, Phone, Mail } from 'lucide-react';
+import { Link, useSearchParams, useLoaderData, type MetaFunction, type LoaderFunctionArgs } from 'react-router';
+import { CheckCircle2, ShoppingBag, ArrowRight, ShieldCheck, Truck, Clock, Phone, Mail, Banknote } from 'lucide-react';
 import { Button } from '~/components/ui/Button';
+import { getHydrogenContext } from '~/lib/context.server';
+import { getCheckoutSession } from '~/services/checkout/checkoutSession.server';
 
 export const meta: MetaFunction = () => {
   return [
@@ -9,46 +11,60 @@ export const meta: MetaFunction = () => {
   ];
 };
 
-import { getHydrogenContext } from '~/lib/context.server';
-
 export async function loader({ context, request }: LoaderFunctionArgs) {
-  const { env } = await getHydrogenContext(context, request);
+  const { session, env } = await getHydrogenContext(context, request);
+  const checkoutSession = getCheckoutSession(session as any);
+
   return {
     storeDomain: env.PUBLIC_STORE_DOMAIN || '',
+    sessionOrderName: checkoutSession?.codOrderName || null,
   };
 }
 
 export default function ThankYouRoute() {
+  const { sessionOrderName } = useLoaderData<typeof loader>();
   const [searchParams] = useSearchParams();
-  const orderNumber = searchParams.get('order') || searchParams.get('order_number');
+
+  const rawOrderNumber = searchParams.get('order') || searchParams.get('order_number') || sessionOrderName;
+  const paymentType = searchParams.get('payment') || 'online';
+  const isCod = paymentType === 'cod';
+
+  // Format order number cleanly
+  const displayOrder = rawOrderNumber
+    ? rawOrderNumber.startsWith('#')
+      ? rawOrderNumber
+      : `#${rawOrderNumber}`
+    : null;
 
   return (
     <div className="max-w-[1000px] mx-auto px-6 md:px-12 py-16" style={{ fontFamily: "'DM Sans', sans-serif" }}>
       <div className="bg-white rounded-[8px] border border-[#e8e4df] p-8 md:p-14 shadow-sm text-center flex flex-col items-center">
         {/* Success Icon */}
         <div className="w-16 h-16 rounded-full bg-[#f5f0e8] flex items-center justify-center text-[#c4622d] mb-6">
-          <CheckCircle2 className="w-9 h-9" />
+          {isCod ? <Banknote className="w-9 h-9" /> : <CheckCircle2 className="w-9 h-9" />}
         </div>
 
         <span className="text-xs uppercase tracking-[0.25em] font-semibold text-[#8b7355] block mb-2">
-          Order Confirmed
+          {isCod ? 'Cash on Delivery · Order Confirmed' : 'Payment & Order Confirmed'}
         </span>
 
         <h1
           className="text-3xl md:text-5xl font-bold text-[#060505] mb-4"
           style={{ fontFamily: "'Playfair Display', serif" }}
         >
-          Thank You for Supporting Artisanal Craft
+          {isCod ? 'Your Artisanal Order Is Placed' : 'Thank You for Supporting Artisanal Craft'}
         </h1>
 
-        {orderNumber && (
+        {displayOrder && (
           <div className="inline-block px-4 py-1.5 bg-[#faf8f5] border border-[#e8e4df] rounded-[4px] text-xs font-semibold text-[#1a1a1a] mb-6">
-            Order Reference: <span className="text-[#c4622d]">#{orderNumber}</span>
+            Order Reference: <span className="text-[#c4622d] font-mono">{displayOrder}</span>
           </div>
         )}
 
         <p className="text-base text-[#686764] max-w-xl mb-8 leading-relaxed" style={{ fontFamily: "'Cormorant', serif", fontSize: '1.25rem' }}>
-          Your payment has been successfully processed through CCAvenue. We have sent a comprehensive receipt and tracking updates to your email.
+          {isCod
+            ? 'Your order has been recorded with payment pending. Our Jaipur studio concierge will contact you to verify before dispatch. Please keep cash ready upon doorstep delivery.'
+            : 'Your payment was successfully received. We have sent a comprehensive receipt and tracking updates to your email.'}
         </p>
 
         {/* Dispatch Promise Grid */}
@@ -96,13 +112,13 @@ export default function ThankYouRoute() {
         <div className="mt-12 pt-8 border-t border-[#e8e4df] w-full flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-[#686764]">
           <span>Need help with your order?</span>
           <div className="flex items-center gap-6">
-            <a href="tel:+919876543210" className="flex items-center gap-1.5 hover:text-[#c4622d] transition-colors">
+            <a href="tel:+918290985337" className="flex items-center gap-1.5 hover:text-[#c4622d] transition-colors">
               <Phone className="w-3.5 h-3.5" />
-              <span>+91 (0) 141 234 5678</span>
+              <span>+91 - 8290985337</span>
             </a>
-            <a href="mailto:care@monts.in" className="flex items-center gap-1.5 hover:text-[#c4622d] transition-colors">
+            <a href="mailto:vastrabymonty@gmail.com" className="flex items-center gap-1.5 hover:text-[#c4622d] transition-colors">
               <Mail className="w-3.5 h-3.5" />
-              <span>care@monts.in</span>
+              <span>vastrabymonty@gmail.com</span>
             </a>
           </div>
         </div>

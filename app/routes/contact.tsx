@@ -53,8 +53,18 @@ export default function ContactRoute() {
             <div className="flex items-start gap-3 text-sm text-[#2c2c2c]">
               <Phone className="w-4 h-4 text-[#c4622d] shrink-0 mt-1" />
               <div>
-                <span className="font-semibold block">Phone</span>
-                <span className="text-[#686764]">+91 (0) 120 456 7890</span>
+                <span className="font-semibold block">Phone / WhatsApp</span>
+                <a href="tel:+918290985337" className="text-[#686764] hover:text-[#c4622d] block">
+                  +91 - 8290985337
+                </a>
+                <a
+                  href="https://wa.me/918290985337"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-xs text-[#25D366] font-medium hover:underline block mt-0.5"
+                >
+                  Chat on WhatsApp
+                </a>
               </div>
             </div>
 
@@ -62,15 +72,19 @@ export default function ContactRoute() {
               <Mail className="w-4 h-4 text-[#c4622d] shrink-0 mt-1" />
               <div>
                 <span className="font-semibold block">Email</span>
-                <span className="text-[#686764]">care@montsindia.com</span>
+                <a href="mailto:vastrabymonty@gmail.com" className="text-[#686764] hover:text-[#c4622d]">
+                  vastrabymonty@gmail.com
+                </a>
               </div>
             </div>
 
             <div className="flex items-start gap-3 text-sm text-[#2c2c2c]">
               <MapPin className="w-4 h-4 text-[#c4622d] shrink-0 mt-1" />
               <div>
-                <span className="font-semibold block">Studio</span>
-                <span className="text-[#686764]">Jaipur, Rajasthan, India</span>
+                <span className="font-semibold block">Store Location</span>
+                <span className="text-[#686764] leading-relaxed">
+                  MONTS, Shop No.7 The Emporium, Puri Anand Vilas, Haryana, Faridabad, 121007
+                </span>
               </div>
             </div>
           </div>

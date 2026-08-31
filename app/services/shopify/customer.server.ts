@@ -1,60 +1,14 @@
 import {
   CUSTOMER_CREATE_MUTATION,
   CUSTOMER_ACCESS_TOKEN_DELETE_MUTATION,
+  STOREFRONT_CUSTOMER_QUERY,
 } from '~/graphql/StorefrontQueries';
-import { getAdminAccessToken } from './adminToken.server';
+import { adminGraphQL } from './adminApi.server';
 
 export interface ShopifyCustomerSyncResult {
   isNewCustomer: boolean;
   customerId?: string;
   error?: string;
-}
-
-// ─── Admin API Helper (Supports Dynamic & Static Tokens) ──────────────────────
-
-async function adminGraphQL(
-  queryName: string,
-  query: string,
-  variables: Record<string, any>,
-  env: Env,
-): Promise<any> {
-  const storeDomain = env.PUBLIC_STORE_DOMAIN;
-  if (!storeDomain) {
-    throw new Error('[Shopify Customer Service] PUBLIC_STORE_DOMAIN is missing in environment.');
-  }
-  const adminApiVersion = env.SHOPIFY_ADMIN_API_VERSION || '2025-01';
-  const adminToken = await getAdminAccessToken(env);
-
-  console.info(`\n🌐 [Shopify Admin API Request: ${queryName}]`);
-  console.info(`📍 Endpoint: https://${storeDomain}/admin/api/${adminApiVersion}/graphql.json`);
-  console.info(`🔑 Token in use: ${adminToken ? `${adminToken.substring(0, 10)}...` : 'NONE'}`);
-  console.info(`📦 Variables:`, JSON.stringify(variables));
-
-  if (!adminToken) {
-    console.error(`❌ [Shopify Admin API] No access token available.`);
-    throw new Error('Could not acquire Shopify Admin API Access Token. Check Client ID / Secret in .env.');
-  }
-
-  const res = await fetch(
-    `https://${storeDomain}/admin/api/${adminApiVersion}/graphql.json`,
-    {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-Shopify-Access-Token': adminToken,
-      },
-      body: JSON.stringify({ query, variables }),
-    },
-  );
-
-  const json: any = await res.json();
-  console.info(`📥 [Shopify Admin API Response: ${queryName}] Status: ${res.status}`);
-
-  if (json.errors?.length) {
-    console.warn(`⚠️ [Shopify Admin API GraphQL Notice in ${queryName}]:`, JSON.stringify(json.errors, null, 2));
-  }
-
-  return json;
 }
 
 // ─── Customer Queries ─────────────────────────────────────────────────────────
@@ -133,6 +87,7 @@ const ADMIN_CUSTOMER_WITH_ORDERS = `
               nodes {
                 title
                 quantity
+                image { url altText }
                 variant {
                   title
                   price
@@ -176,6 +131,56 @@ const ADMIN_CUSTOMER_PROFILE_ONLY = `
           zip
           country
           phone
+        }
+      }
+    }
+  }
+`;
+
+const ADMIN_GET_ORDER_BY_ID = `
+  query getAdminOrderById($id: ID!) {
+    order(id: $id) {
+      id
+      name
+      processedAt
+      displayFinancialStatus
+      displayFulfillmentStatus
+      statusPageUrl
+      customer {
+        id
+        email
+        firstName
+        lastName
+      }
+      totalPriceSet {
+        shopMoney {
+          amount
+          currencyCode
+        }
+      }
+      shippingAddress {
+        address1
+        address2
+        city
+        province
+        zip
+        country
+        phone
+      }
+      lineItems(first: 25) {
+        nodes {
+          id
+          title
+          quantity
+          image { url altText }
+          variant {
+            title
+            price
+            image {
+              url
+              altText
+            }
+          }
         }
       }
     }
@@ -274,6 +279,8 @@ export class ShopifyCustomerService {
 
     if (env && email) {
       try {
+        let ordersPermissionDenied = false;
+
         // 1. Try full query with orders
         let result = await adminGraphQL(
           'getAdminCustomerWithOrders',
@@ -283,8 +290,9 @@ export class ShopifyCustomerService {
         );
 
         // 2. If orders field is restricted (e.g. read_orders scope pending), fallback to profile-only query
-        if (!result?.data?.customers && result?.errors?.some((e: any) => e.path?.includes('orders'))) {
-          console.info('ℹ️ [Shopify Customer Profile] Retrying with profile-only query...');
+        if (!result?.data?.customers && result?.errors?.some((e: any) => e.path?.includes('orders') || e.message?.toLowerCase().includes('orders'))) {
+          console.info('ℹ️ [Shopify Customer Profile] Retrying with profile-only query (read_orders scope required)...');
+          ordersPermissionDenied = true;
           result = await adminGraphQL(
             'getAdminCustomerProfileOnly',
             ADMIN_CUSTOMER_PROFILE_ONLY,
@@ -295,7 +303,7 @@ export class ShopifyCustomerService {
 
         const found = result?.data?.customers?.nodes?.[0];
         if (found) {
-          console.info(`✅ [Shopify Customer Profile Success] Found customer: ${found.firstName || ''} ${found.lastName || ''} (Orders: ${found.numberOfOrders || 0})`);
+          console.info(`✅ [Shopify Customer Profile Success] Found customer: ${found.firstName || ''} ${found.lastName || ''} (Orders: ${found.numberOfOrders || 0}, PermissionDenied: ${ordersPermissionDenied})`);
           
           return {
             id: found.id,
@@ -304,6 +312,7 @@ export class ShopifyCustomerService {
             email: found.email,
             phone: found.phone,
             numberOfOrders: found.numberOfOrders,
+            ordersPermissionDenied,
             defaultAddress: found.defaultAddress,
             addresses: {
               nodes: found.addresses || [],
@@ -348,6 +357,133 @@ export class ShopifyCustomerService {
     }
 
     return null;
+  }
+
+  /**
+   * Resolves an individual order for the authenticated customer.
+   * Supports both passwordless OTP email sessions and Storefront access token sessions.
+   * Strictly enforces customer ownership (IDOR prevention).
+   */
+  async getOrder(
+    storefront: any,
+    customerAccessToken?: string,
+    email?: string,
+    orderId?: string,
+    env?: Env,
+  ): Promise<{
+    order: any | null;
+    customer: any | null;
+    permissionDenied?: boolean;
+    unauthorized?: boolean;
+  }> {
+    if (!orderId) {
+      return { order: null, customer: null };
+    }
+
+    const cleanOrderId = orderId.trim();
+
+    // 1. Storefront API path (if customerAccessToken is available)
+    if (customerAccessToken && storefront) {
+      try {
+        const data: any = await storefront.query(STOREFRONT_CUSTOMER_QUERY, {
+          variables: { customerAccessToken },
+          cache: storefront.CacheNone(),
+        });
+        const customer = data?.customer;
+        const orders = customer?.orders?.nodes || [];
+        const order = orders.find((o: any) => {
+          const rawId = o.id || '';
+          return (
+            rawId === cleanOrderId ||
+            rawId.endsWith(`/${cleanOrderId}`) ||
+            o.name === cleanOrderId ||
+            o.name === `#${cleanOrderId}` ||
+            String(o.orderNumber || o.number) === cleanOrderId
+          );
+        });
+        if (order) {
+          return { order, customer };
+        }
+      } catch (err: any) {
+        console.warn('[Shopify Customer Service] Storefront getOrder notice:', err?.message);
+      }
+    }
+
+    // 2. Admin API path via Customer Profile (for passwordless OTP users)
+    let customerProfile: any = null;
+    if (email && env) {
+      customerProfile = await this.getCustomerProfile(storefront, customerAccessToken, email, env);
+      const orders = customerProfile?.orders?.nodes || [];
+      const order = orders.find((o: any) => {
+        const rawId = o.id || '';
+        return (
+          rawId === cleanOrderId ||
+          rawId.endsWith(`/${cleanOrderId}`) ||
+          o.name === cleanOrderId ||
+          o.name === `#${cleanOrderId}` ||
+          String(o.orderNumber) === cleanOrderId
+        );
+      });
+      if (order) {
+        return { order, customer: customerProfile };
+      }
+    }
+
+    // 3. Direct Admin API Order Lookup by GID / Number (if read_orders scope is active)
+    if (env && (cleanOrderId.startsWith('gid://') || /^\d+$/.test(cleanOrderId))) {
+      const gid = cleanOrderId.startsWith('gid://') ? cleanOrderId : `gid://shopify/Order/${cleanOrderId}`;
+      try {
+        const orderRes = await adminGraphQL('getAdminOrderById', ADMIN_GET_ORDER_BY_ID, { id: gid }, env);
+        const adminOrder = orderRes?.data?.order;
+        if (adminOrder) {
+          // IDOR check: verify that this order belongs to the requesting customer's email
+          if (email && adminOrder.customer?.email?.toLowerCase() !== email.toLowerCase()) {
+            console.warn(`[Shopify Customer Service] IDOR mismatch for order ${cleanOrderId} vs email ${email}`);
+            return { order: null, customer: customerProfile, unauthorized: true };
+          }
+
+          const formattedOrder = {
+            id: adminOrder.id,
+            name: adminOrder.name,
+            orderNumber: adminOrder.name?.replace('#', ''),
+            processedAt: adminOrder.processedAt,
+            financialStatus: adminOrder.displayFinancialStatus || 'PAID',
+            fulfillmentStatus: adminOrder.displayFulfillmentStatus || 'UNFULFILLED',
+            statusUrl: adminOrder.statusPageUrl,
+            shippingAddress: adminOrder.shippingAddress,
+            totalPrice: {
+              amount: adminOrder.totalPriceSet?.shopMoney?.amount || '0',
+              currencyCode: adminOrder.totalPriceSet?.shopMoney?.currencyCode || 'INR',
+            },
+            lineItems: {
+              nodes: (adminOrder.lineItems?.nodes || []).map((li: any) => ({
+                title: li.title,
+                quantity: li.quantity,
+                variant: li.variant
+                  ? {
+                      title: li.variant.title,
+                      image: li.variant.image || null,
+                      price: {
+                        amount: String(li.variant.price || '0'),
+                        currencyCode: adminOrder.totalPriceSet?.shopMoney?.currencyCode || 'INR',
+                      },
+                    }
+                  : null,
+              })),
+            },
+          };
+          return { order: formattedOrder, customer: customerProfile || adminOrder.customer };
+        }
+      } catch (err: any) {
+        console.warn('[Shopify Customer Service] Direct Admin getOrder notice:', err?.message);
+      }
+    }
+
+    return {
+      order: null,
+      customer: customerProfile,
+      permissionDenied: customerProfile?.ordersPermissionDenied,
+    };
   }
 
   /**

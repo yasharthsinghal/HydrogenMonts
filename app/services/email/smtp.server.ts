@@ -1,5 +1,5 @@
-import type { IEmailProvider, SendOtpOptions, EmailProviderResult } from './types';
-import { generateOtpEmailHtml } from './types';
+import type { IEmailProvider, SendOtpOptions, SendOrderConfirmationOptions, EmailProviderResult } from './types';
+import { generateOtpEmailHtml, generateOrderConfirmationHtml } from './types';
 
 export class GoogleSmtpEmailProvider implements IEmailProvider {
   name = 'google_smtp' as const;
@@ -58,4 +58,55 @@ export class GoogleSmtpEmailProvider implements IEmailProvider {
       };
     }
   }
+
+  async sendOrderConfirmation(options: SendOrderConfirmationOptions, env: Env): Promise<EmailProviderResult> {
+    const host = env.SMTP_HOST || 'smtp.gmail.com';
+    const port = Number(env.SMTP_PORT) || 465;
+    const user = env.SMTP_USER;
+    const pass = env.SMTP_PASS;
+
+    if (!user || !pass || pass.includes('xxxx')) {
+      return {
+        success: false,
+        provider: this.name,
+        error: 'SMTP credentials missing or contains placeholder.',
+      };
+    }
+
+    const from = env.SMTP_FROM || `MONTS <${user}>`;
+    const emailHtml = generateOrderConfirmationHtml(options);
+
+    try {
+      const nodemailer = await import('nodemailer');
+      const createTransport = nodemailer.default?.createTransport || nodemailer.createTransport;
+
+      if (!createTransport) {
+        throw new Error('Nodemailer createTransport is not available.');
+      }
+
+      const transporter = createTransport({
+        host,
+        port,
+        secure: port === 465,
+        auth: { user, pass },
+      });
+
+      const info = await transporter.sendMail({
+        from,
+        to: options.to,
+        subject: `MONTS Order Confirmed: ${options.orderName}`,
+        html: emailHtml,
+      });
+
+      console.info(`[Google SMTP] Order confirmation sent to ${options.to} (${info?.messageId || 'ok'})`);
+      return { success: true, provider: this.name };
+    } catch (error: any) {
+      return {
+        success: false,
+        provider: this.name,
+        error: error?.message || 'Failed to dispatch via SMTP',
+      };
+    }
+  }
 }
+
