@@ -46,6 +46,14 @@ declare global {
     // Resend Credentials
     RESEND_API_KEY?: string;
     RESEND_FROM_EMAIL?: string;
+
+    // Discounts
+    PREPAID_DISCOUNT_CODE?: string;
+
+    // Location Service
+    LOCATION_PROVIDER?: string;
+    LOCATION_API_BASE_URL?: string;
+    LOCATION_API_TIMEOUT_MS?: string;
   }
 
   /**

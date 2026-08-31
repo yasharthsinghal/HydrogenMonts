@@ -10,7 +10,11 @@ import {
   createCartHandler,
   cartGetIdDefault,
   cartSetIdDefault,
+  InMemoryCache,
 } from '@shopify/hydrogen';
+
+// Shared in-memory cache instance for Storefront API sub-requests (Node.js & Vercel)
+const defaultInMemoryCache = new InMemoryCache();
 
 /**
  * Standard Hydrogen cookie session wrapper implementing HydrogenSession interface.
@@ -94,6 +98,7 @@ export async function createHydrogenContext(
   const session = await AppSession.init(request, [sessionSecret]);
 
   const { storefront } = createStorefrontClient({
+    cache: defaultInMemoryCache,
     i18n: { language: 'EN', country: 'IN' },
     publicStorefrontToken: env.PUBLIC_STOREFRONT_API_TOKEN || process.env.PUBLIC_STOREFRONT_API_TOKEN || '',
     privateStorefrontToken:
