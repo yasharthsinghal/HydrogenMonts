@@ -60,17 +60,21 @@ export async function loader({ params, request, context }: LoaderFunctionArgs) {
     try {
         const data = await storefront.query(PRODUCT_BY_HANDLE_QUERY, {
             variables: { handle },
-            cache: storefront.CacheNone(),
+            cache: storefront.CacheShort(),
         });
-        product = data.product;
+        product = data?.product;
 
         if (product?.id) {
-            const recData = await storefront.query(RECOMMENDED_PRODUCTS_QUERY, {
-                variables: { productId: product.id },
-                cache: storefront.CacheNone(),
-            });
-            recommendedProducts = (recData.productRecommendations ||
-                []) as ProductCardItem[];
+            try {
+                const recData = await storefront.query(RECOMMENDED_PRODUCTS_QUERY, {
+                    variables: { productId: product.id },
+                    cache: storefront.CacheShort(),
+                });
+                recommendedProducts = (recData?.productRecommendations ||
+                    []) as ProductCardItem[];
+            } catch (recError) {
+                console.warn("Product recommendations non-critical fetch error:", recError);
+            }
         }
     } catch (error) {
         console.error("Product detail query error:", error);

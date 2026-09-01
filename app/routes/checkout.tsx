@@ -18,6 +18,7 @@ import { IndianAddressFields } from '~/components/address/IndianAddressFields';
 import { Button } from '~/components/ui/Button';
 import { Input } from '~/components/ui/Input';
 import { Breadcrumb } from '~/components/ui/Breadcrumb';
+import { FormOverlayLoader } from '~/components/ui/FormOverlayLoader';
 import {
   Lock,
   Mail,
@@ -57,33 +58,37 @@ export const meta: MetaFunction = () => {
 export async function loader({ context, request }: LoaderFunctionArgs) {
   const { session, cart, customerAccount, storefront, env } = await getHydrogenContext(context, request);
 
-  // 1. Retrieve single authoritative Shopify cart
-  const cartData = await cart.get();
-  const totalQuantity = cartData?.totalQuantity ?? 0;
-
-  if (!cartData || totalQuantity <= 0) {
-    return redirect('/cart');
-  }
-
-  // 2. Fetch authenticated customer profile if logged in (via OTP session or Customer Account API)
-  let customer: any = null;
-  const customerEmail = session.get('customerEmail') as string | undefined;
-  if (customerEmail) {
-    try {
-      customer = await shopifyCustomerService.getCustomerProfile(storefront, undefined, customerEmail, env);
-    } catch (error) {
-      // Non-blocking
+  // Helper to fetch authenticated customer profile in parallel with cart
+  const fetchCustomerProfile = async () => {
+    const customerEmail = session.get('customerEmail') as string | undefined;
+    if (customerEmail) {
+      try {
+        return await shopifyCustomerService.getCustomerProfile(storefront, undefined, customerEmail, env);
+      } catch (error) {
+        return null;
+      }
     }
-  } else {
     try {
       const isLoggedIn = await customerAccount.isLoggedIn();
       if (isLoggedIn) {
         const { data: customerData }: any = await customerAccount.query(CUSTOMER_DETAILS_QUERY);
-        customer = customerData?.customer;
+        return customerData?.customer || null;
       }
     } catch (error) {
-      // Non-blocking for checkout
+      return null;
     }
+    return null;
+  };
+
+  // Parallelize cart retrieval and customer profile query
+  const [cartData, customer] = await Promise.all([
+    cart.get(),
+    fetchCustomerProfile(),
+  ]);
+
+  const totalQuantity = cartData?.totalQuantity ?? 0;
+  if (!cartData || totalQuantity <= 0) {
+    return redirect('/cart');
   }
 
   return {
@@ -295,9 +300,18 @@ export default function CheckoutPage() {
 
   return (
     <div
-      className="min-h-screen bg-[#f5f0e8] py-10 px-6 md:px-12"
+      className="min-h-screen bg-[#f5f0e8] py-10 px-6 md:px-12 relative"
       style={{ fontFamily: "'DM Sans', sans-serif" }}
     >
+      <FormOverlayLoader
+        isLoading={isSubmitting}
+        isFixed
+        message={
+          paymentMethod === 'COD'
+            ? 'Securing & placing your Cash on Delivery order...'
+            : 'Connecting to 256-bit SSL encrypted payment gateway...'
+        }
+      />
       <div className="max-w-[1280px] mx-auto">
         <Breadcrumb
           items={[

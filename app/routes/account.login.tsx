@@ -13,6 +13,7 @@ import { useState, useEffect } from 'react';
 import { Button } from '~/components/ui/Button';
 import { Input } from '~/components/ui/Input';
 import { Breadcrumb } from '~/components/ui/Breadcrumb';
+import { FormOverlayLoader } from '~/components/ui/FormOverlayLoader';
 import { sanitizeRedirect } from '~/lib/redirect';
 import {
   generateOtp,
@@ -249,7 +250,15 @@ export default function LoginPage() {
           className="mb-8 justify-center"
         />
 
-        <div className="bg-[#faf8f5] border border-[#e8e4df] p-8 md:p-10 rounded-[8px] shadow-sm">
+        <div className="bg-[#faf8f5] border border-[#e8e4df] p-8 md:p-10 rounded-[8px] shadow-sm relative overflow-hidden">
+          <FormOverlayLoader
+            isLoading={isSubmitting}
+            message={
+              step === 'email'
+                ? 'Generating & sending your secure 6-digit verification code...'
+                : 'Verifying OTP & synchronizing your account...'
+            }
+          />
           {/* Header */}
           <div className="text-center mb-8">
             <span className="text-xs uppercase tracking-[0.2em] font-semibold text-[#8b7355] block mb-2">

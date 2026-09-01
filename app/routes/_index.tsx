@@ -2,6 +2,7 @@ import { useLoaderData, Link, type MetaFunction, type LoaderFunctionArgs } from 
 import { HOMEPAGE_QUERY } from '~/graphql/StorefrontQueries';
 import type { ProductCardItem, CollectionCardItem } from '~/types/storefront.types';
 import { ProductGrid } from '~/components/products/ProductGrid';
+import { useScrollReveal } from '~/hooks/useScrollReveal';
 import {
   Sparkles,
   ArrowRight,
@@ -62,6 +63,7 @@ export async function loader({ request, context }: LoaderFunctionArgs) {
 }
 
 export default function IndexRoute() {
+  useScrollReveal();
   const { baseUrl, collections, featuredProducts, allProducts } = useLoaderData<typeof loader>();
 
   const heroImage =
@@ -169,7 +171,7 @@ export default function IndexRoute() {
 
       {/* ─── 2. CURATED SERIES / FEATURED COLLECTIONS ─── */}
       {collections.length > 0 && (
-        <section className="py-20 bg-[#f5f0e8]">
+        <section className="py-20 bg-[#f5f0e8] reveal">
           <div className="max-w-[1400px] mx-auto px-6 md:px-12">
             <div className="flex justify-between items-end mb-10 pb-4 border-b border-[#e8e4df]">
               <div>
@@ -261,7 +263,7 @@ export default function IndexRoute() {
       )}
 
       {/* ─── 3. DOUBLE EDITORIAL BANNER ─── */}
-      <section className="w-full">
+      <section className="w-full reveal">
         <div className="grid grid-cols-1 md:grid-cols-2">
           <div
             className="relative overflow-hidden flex items-end p-10 md:p-14"
@@ -344,7 +346,7 @@ export default function IndexRoute() {
       </section>
 
       {/* ─── 4. FEATURED PRODUCTS ─── */}
-      <section className="py-20 bg-[#f5f0e8]">
+      <section className="py-20 bg-[#f5f0e8] reveal">
         <div className="max-w-[1400px] mx-auto px-6 md:px-12">
           <div className="text-center max-w-xl mx-auto mb-12">
             <span
@@ -371,7 +373,7 @@ export default function IndexRoute() {
       </section>
 
       {/* ─── 5. FULL CATALOG GRID ─── */}
-      <section className="py-20 bg-[#f8f8f8]">
+      <section className="py-20 bg-[#f8f8f8] reveal">
         <div className="max-w-[1400px] mx-auto px-6 md:px-12">
           <div className="flex justify-between items-center mb-10 pb-4 border-b border-[#e8e4df]">
             <div>

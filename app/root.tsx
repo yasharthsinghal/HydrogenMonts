@@ -6,6 +6,7 @@ import {
   ScrollRestoration,
   useRouteLoaderData,
   useRouteError,
+  useNavigation,
   isRouteErrorResponse,
   type LoaderFunctionArgs,
 } from 'react-router';
@@ -15,6 +16,8 @@ import { Header } from '~/components/common/Header';
 import { Footer } from '~/components/common/Footer';
 import { MobileNav } from '~/components/common/MobileNav';
 import { CartDrawer } from '~/components/cart/CartDrawer';
+import { PageProgressLoader } from '~/components/common/PageProgressLoader';
+import { ScrollToTop } from '~/components/common/ScrollToTop';
 
 import { getHydrogenContext } from '~/lib/context.server';
 
@@ -31,25 +34,23 @@ import type { CollectionCardItem } from '~/types/storefront.types';
 
 export async function loader({ context, request }: LoaderFunctionArgs) {
   const { cart, session, env, storefront } = await getHydrogenContext(context, request);
-  let cartData = null;
-  try {
-    cartData = await cart.get();
-  } catch (error) {
-    // Session cart fallback
-  }
 
-  const customerAccessToken = session.get('customerAccessToken');
-
-  let collections: CollectionCardItem[] = [];
-  try {
-    const collectionsData = await storefront.query(COLLECTIONS_QUERY, {
+  // Parallelize cart retrieval and collections fetching to eliminate waterfall delay
+  const [cartResult, collectionsResult] = await Promise.allSettled([
+    cart.get(),
+    storefront.query(COLLECTIONS_QUERY, {
       variables: { first: 30 },
       cache: storefront.CacheShort(),
-    });
-    collections = (collectionsData.collections?.nodes || []) as CollectionCardItem[];
-  } catch (error) {
-    console.error('Root loader collections query notice:', error);
-  }
+    }),
+  ]);
+
+  const cartData = cartResult.status === 'fulfilled' ? cartResult.value : null;
+  const collections =
+    collectionsResult.status === 'fulfilled'
+      ? ((collectionsResult.value?.collections?.nodes || []) as CollectionCardItem[])
+      : [];
+
+  const customerAccessToken = session.get('customerAccessToken');
 
   return {
     cart: cartData,
@@ -63,6 +64,15 @@ export function Layout({ children }: { children?: React.ReactNode }) {
   const data = useRouteLoaderData<typeof loader>('root');
   const cart = data?.cart;
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  const [cartOpen, setCartOpen] = useState(false);
+
+  // Global listener for opening cart drawer from anywhere (product card, quick actions)
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const handleOpenCart = () => setCartOpen(true);
+    window.addEventListener('open-cart', handleOpenCart);
+    return () => window.removeEventListener('open-cart', handleOpenCart);
+  }, []);
 
   return (
     <html lang="en" suppressHydrationWarning>
@@ -76,9 +86,12 @@ export function Layout({ children }: { children?: React.ReactNode }) {
         className="min-h-screen flex flex-col antialiased bg-[#f5f0e8] text-[#2c2c2c]"
         suppressHydrationWarning
       >
+        <PageProgressLoader />
+
         <Header
           cartCount={cart?.totalQuantity ?? 0}
           onOpenMobileNav={() => setMobileNavOpen(true)}
+          onOpenCart={() => setCartOpen(true)}
         />
 
         <main className="flex-1">
@@ -92,6 +105,13 @@ export function Layout({ children }: { children?: React.ReactNode }) {
           onClose={() => setMobileNavOpen(false)}
         />
 
+        <CartDrawer
+          isOpen={cartOpen}
+          onClose={() => setCartOpen(false)}
+          cart={cart}
+        />
+
+        <ScrollToTop />
         <ScrollRestoration />
         <Scripts />
       </body>
@@ -100,7 +120,18 @@ export function Layout({ children }: { children?: React.ReactNode }) {
 }
 
 export default function App() {
-  return <Outlet />;
+  const navigation = useNavigation();
+  const isNavigating = navigation.state !== 'idle' && Boolean(navigation.location);
+
+  return (
+    <div
+      className={`transition-opacity duration-200 ease-out ${
+        isNavigating ? 'opacity-60' : 'opacity-100'
+      }`}
+    >
+      <Outlet />
+    </div>
+  );
 }
 
 export function ErrorBoundary() {

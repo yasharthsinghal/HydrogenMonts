@@ -106,19 +106,17 @@ export const Header: React.FC<HeaderProps> = ({
 
       {/* Main Nav Bar */}
       <div
-        className={`w-full transition-all duration-300 ${
-          isScrolled ? 'shadow-md py-2.5' : 'py-4'
+        className={`w-full transition-all duration-300 ease-out border-b border-[#e8e4df] ${
+          isScrolled
+            ? 'shadow-sm py-2.5 bg-[#faf8f5]/92 backdrop-blur-md'
+            : 'py-4 bg-[#faf8f5]'
         }`}
-        style={{
-          backgroundColor: '#faf8f5',
-          borderBottom: '1px solid #e8e4df',
-        }}
       >
         <div className="max-w-[1400px] mx-auto px-6 md:px-12 flex items-center justify-between gap-4">
           {/* Left: Mobile hamburger */}
           <button
             onClick={onOpenMobileNav}
-            className="md:hidden p-2 transition-colors text-[#1a1a1a] hover:text-[#c4622d] cursor-pointer"
+            className="md:hidden p-2 rounded-full transition-all text-[#1a1a1a] hover:text-[#c4622d] hover:bg-[#f0edea] active:scale-90 cursor-pointer"
             aria-label="Open mobile menu"
           >
             <Menu className="w-6 h-6" />
@@ -127,7 +125,7 @@ export const Header: React.FC<HeaderProps> = ({
           {/* Logo */}
           <Link
             to="/"
-            className="text-2xl md:text-3xl font-bold tracking-widest uppercase text-[#060505] hover:opacity-90 transition-opacity"
+            className="text-2xl md:text-3xl font-bold tracking-widest uppercase text-[#060505] hover:opacity-85 transition-opacity"
             style={{ fontFamily: "'Playfair Display', serif" }}
           >
             MONTS
@@ -139,12 +137,12 @@ export const Header: React.FC<HeaderProps> = ({
           </div>
 
           {/* Right: Actions */}
-          <div className="flex items-center gap-2 sm:gap-4">
+          <div className="flex items-center gap-2 sm:gap-3">
             {/* Search Toggle Button */}
             <button
               type="button"
               onClick={handleToggleSearch}
-              className="p-2 text-[#1a1a1a] hover:text-[#c4622d] hover:bg-[#f0edea] rounded-full transition-colors cursor-pointer"
+              className="p-2 text-[#1a1a1a] hover:text-[#c4622d] hover:bg-[#f0edea] active:scale-90 rounded-full transition-all cursor-pointer"
               aria-label={searchOpen ? 'Close search' : 'Open search'}
             >
               {searchOpen ? <X className="w-5 h-5" /> : <Search className="w-5 h-5" />}
@@ -153,26 +151,49 @@ export const Header: React.FC<HeaderProps> = ({
             {/* Account */}
             <Link
               to="/account"
-              className="p-2 text-[#1a1a1a] hover:text-[#c4622d] hover:bg-[#f0edea] rounded-full transition-colors"
+              className="p-2 text-[#1a1a1a] hover:text-[#c4622d] hover:bg-[#f0edea] active:scale-90 rounded-full transition-all"
               aria-label="Customer Account"
             >
               <User className="w-5 h-5" />
             </Link>
 
-            {/* Cart Link (Full Page) */}
-            <Link
-              to="/cart"
-              className="relative flex items-center gap-2 px-3.5 py-2 text-xs font-semibold rounded-[6px] bg-[#c4622d] text-white hover:bg-[#923f12] transition-colors cursor-pointer"
-              aria-label="Shopping Cart"
-            >
-              <ShoppingBag className="w-4 h-4" />
-              <span className="hidden sm:inline">Cart</span>
-              {cartCount > 0 && (
-                <span className="flex items-center justify-center w-5 h-5 text-[10px] font-bold rounded-full bg-white text-[#c4622d]">
-                  {cartCount}
-                </span>
-              )}
-            </Link>
+            {/* Cart Trigger */}
+            {onOpenCart ? (
+              <button
+                type="button"
+                onClick={onOpenCart}
+                className="relative flex items-center gap-2 px-3.5 py-2 text-xs font-semibold rounded-[6px] bg-[#c4622d] text-white hover:bg-[#923f12] active:scale-95 transition-all cursor-pointer shadow-xs"
+                aria-label="Shopping Cart Drawer"
+              >
+                <ShoppingBag className="w-4 h-4" />
+                <span className="hidden sm:inline">Cart</span>
+                {cartCount > 0 && (
+                  <span
+                    key={cartCount}
+                    className="flex items-center justify-center w-5 h-5 text-[10px] font-bold rounded-full bg-white text-[#c4622d] animate-badge-pop"
+                  >
+                    {cartCount}
+                  </span>
+                )}
+              </button>
+            ) : (
+              <Link
+                to="/cart"
+                className="relative flex items-center gap-2 px-3.5 py-2 text-xs font-semibold rounded-[6px] bg-[#c4622d] text-white hover:bg-[#923f12] active:scale-95 transition-all cursor-pointer shadow-xs"
+                aria-label="Shopping Cart"
+              >
+                <ShoppingBag className="w-4 h-4" />
+                <span className="hidden sm:inline">Cart</span>
+                {cartCount > 0 && (
+                  <span
+                    key={cartCount}
+                    className="flex items-center justify-center w-5 h-5 text-[10px] font-bold rounded-full bg-white text-[#c4622d] animate-badge-pop"
+                  >
+                    {cartCount}
+                  </span>
+                )}
+              </Link>
+            )}
           </div>
         </div>
       </div>

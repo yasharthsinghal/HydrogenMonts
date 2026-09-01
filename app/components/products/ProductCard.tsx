@@ -66,19 +66,35 @@ export const ProductCard: React.FC<ProductCardProps> = ({
 
   return (
     <div
-      className="group relative flex flex-col h-full transition-all duration-300 rounded-[2px] overflow-hidden bg-white border border-[#e8e4df]/60 hover:border-[#e8e4df] hover:shadow-md"
+      className="group relative flex flex-col h-full transition-all duration-300 rounded-[2px] overflow-hidden bg-white border border-[#e8e4df]/60 hover:border-[#dac7b4] hover:shadow-lg"
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
       {/* 1:1 Square Image Container */}
       <div className="relative w-full overflow-hidden bg-[#f5f0e8]" style={{ aspectRatio: '1/1' }}>
-        <Link to={`/products/${product.handle}`} className="block w-full h-full">
+        <Link to={`/products/${product.handle}`} className="relative block w-full h-full overflow-hidden">
+          {/* Featured Primary Image */}
           <img
-            src={isHovered ? secondaryImage : featuredImage}
+            src={featuredImage}
             alt={product.featuredImage?.altText || product.title}
             loading="lazy"
-            className="w-full h-full object-cover object-center transition-transform duration-700 ease-out group-hover:scale-105"
+            className="absolute inset-0 w-full h-full object-cover object-center transition-all duration-700 ease-out group-hover:scale-105"
+            style={{
+              opacity: isHovered && secondaryImage && secondaryImage !== featuredImage ? 0 : 1,
+            }}
           />
+          {/* Secondary Lookbook Image (Cross-faded on hover) */}
+          {secondaryImage && secondaryImage !== featuredImage && (
+            <img
+              src={secondaryImage}
+              alt={`${product.title} alternate view`}
+              loading="lazy"
+              className="absolute inset-0 w-full h-full object-cover object-center transition-all duration-700 ease-out group-hover:scale-105"
+              style={{
+                opacity: isHovered ? 1 : 0,
+              }}
+            />
+          )}
         </Link>
 
         {/* Badges */}
@@ -87,13 +103,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
         </div>
 
         {/* Quick Actions Hover Toolbar */}
-        <div
-          className="absolute bottom-0 inset-x-0 z-10 flex transition-all duration-200"
-          style={{
-            opacity: isHovered ? 1 : 0,
-            transform: isHovered ? 'translateY(0)' : 'translateY(8px)',
-          }}
-        >
+        <div className="absolute bottom-0 inset-x-0 z-10 flex transform transition-all duration-200 ease-out translate-y-2 opacity-0 group-hover:translate-y-0 group-hover:opacity-100">
           {onQuickView ? (
             <button
               onClick={() => onQuickView(product)}
@@ -118,7 +128,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
             <button
               onClick={handleCartClick}
               disabled={!firstVariant.availableForSale || isAdding}
-              className="py-2.5 px-4 text-xs font-semibold flex items-center justify-center transition-colors bg-[#c4622d] text-white hover:bg-[#923f12] disabled:bg-[#e1dcd5] cursor-pointer"
+              className="py-2.5 px-4 text-xs font-semibold flex items-center justify-center transition-all duration-150 bg-[#c4622d] text-white hover:bg-[#923f12] disabled:bg-[#e1dcd5] active:scale-95 cursor-pointer"
               style={{ fontFamily: "'DM Sans', sans-serif" }}
               title={firstVariant.availableForSale ? 'Add to Cart' : 'Sold Out'}
             >

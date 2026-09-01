@@ -3,6 +3,7 @@ import { data, useFetcher, type MetaFunction, type ActionFunctionArgs } from 're
 import { Breadcrumb } from '~/components/ui/Breadcrumb';
 import { Input } from '~/components/ui/Input';
 import { Button } from '~/components/ui/Button';
+import { FormOverlayLoader } from '~/components/ui/FormOverlayLoader';
 import { Phone, Mail, MapPin, CheckCircle2, AlertCircle } from 'lucide-react';
 import { clsx } from 'clsx';
 import { getHydrogenContext } from '~/lib/context.server';
@@ -294,7 +295,11 @@ export default function ContactRoute() {
           </div>
 
           {/* Form Column */}
-          <div className="md:col-span-2 p-8 bg-white rounded-[6px] border border-[#e8e4df]">
+          <div className="md:col-span-2 p-8 bg-white rounded-[6px] border border-[#e8e4df] relative overflow-hidden">
+            <FormOverlayLoader
+              isLoading={isSubmitting}
+              message="Sending your inquiry to our concierge team..."
+            />
             {isSuccess ? (
               <div className="flex flex-col items-center justify-center text-center py-12 gap-4">
                 <CheckCircle2 className="w-12 h-12 text-[#8b7355]" />

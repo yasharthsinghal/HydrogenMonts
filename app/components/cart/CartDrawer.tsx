@@ -1,9 +1,10 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { Link, useFetcher } from 'react-router';
 import { X, ShoppingBag, ArrowRight } from 'lucide-react';
 import { CartItem } from './CartItem';
 import { EmptyState } from '~/components/ui/EmptyState';
 import { Button } from '~/components/ui/Button';
+import { FormOverlayLoader } from '~/components/ui/FormOverlayLoader';
 
 export interface CartDrawerProps {
   isOpen: boolean;
@@ -37,19 +38,28 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
   const fetcher = useFetcher();
   const isMutating = fetcher.state !== 'idle';
   const [isRedirecting, setIsRedirecting] = useState(false);
+  const drawerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    if (typeof document === 'undefined') return;
+
     if (isOpen) {
       document.body.style.overflow = 'hidden';
     } else {
-      document.body.style.overflow = 'unset';
+      const el = drawerRef.current;
+      const cleanup = () => {
+        document.body.style.overflow = '';
+      };
+      if (el) {
+        el.addEventListener('transitionend', cleanup, { once: true });
+      } else {
+        document.body.style.overflow = '';
+      }
     }
     return () => {
-      document.body.style.overflow = 'unset';
+      document.body.style.overflow = '';
     };
   }, [isOpen]);
-
-  if (!isOpen) return null;
 
   const rawLines: any = cart?.lines;
   const lines: any[] =
@@ -70,10 +80,6 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
     cart?.cost?.subtotalAmount?.currencyCode ||
     cart?.cost?.totalAmount?.currencyCode ||
     'INR';
-
-  const freeShippingThreshold = 999;
-  const progressPercent = Math.min(100, Math.round((subtotal / freeShippingThreshold) * 100));
-  const remainingForFreeShipping = Math.max(0, freeShippingThreshold - subtotal);
 
   const formatPrice = (amount: number, currency: string) => {
     return new Intl.NumberFormat('en-IN', {
@@ -111,21 +117,36 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
     handleUpdateQuantity(lineId, 0);
   };
 
-  const handleCheckout = (e: React.MouseEvent<HTMLAnchorElement>) => {
+  const handleCheckout = () => {
     if (!cart?.checkoutUrl || isRedirecting) return;
     setIsRedirecting(true);
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex justify-end" style={{ fontFamily: "'DM Sans', sans-serif" }}>
+    <div
+      aria-hidden={!isOpen}
+      className={`fixed inset-0 z-50 flex justify-end transition-opacity duration-300 ease-out ${
+        isOpen ? 'pointer-events-auto opacity-100' : 'pointer-events-none opacity-0'
+      }`}
+      style={{ fontFamily: "'DM Sans', sans-serif" }}
+    >
       {/* Backdrop */}
       <div
-        className="fixed inset-0 bg-[#060505]/60 backdrop-blur-xs transition-opacity"
+        className={`fixed inset-0 bg-[#060505]/60 backdrop-blur-xs transition-opacity duration-300 ease-out ${
+          isOpen ? 'opacity-100' : 'opacity-0'
+        }`}
         onClick={onClose}
       />
 
       {/* Drawer Panel */}
-      <div className="relative w-full max-w-md bg-[#faf8f5] h-full shadow-2xl z-10 flex flex-col justify-between border-l border-[#e8e4df]">
+      <div
+        ref={drawerRef}
+        className={`relative w-full max-w-md bg-[#faf8f5] h-full shadow-2xl z-10 flex flex-col justify-between border-l border-[#e8e4df] transform transition-transform duration-300 ease-out ${
+          isOpen ? 'translate-x-0' : 'translate-x-full'
+        }`}
+      >
+        <FormOverlayLoader isLoading={isMutating} message="Updating your bag..." />
+
         {/* Header */}
         <div>
           <div className="flex items-center justify-between p-5 border-b border-[#e8e4df] bg-white">
@@ -145,7 +166,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
             </div>
             <button
               onClick={onClose}
-              className="p-1 rounded-full text-[#686764] hover:text-[#060505] hover:bg-[#f0edea] transition-colors cursor-pointer"
+              className="p-1.5 rounded-full text-[#686764] hover:text-[#060505] hover:bg-[#f0edea] active:scale-95 transition-all cursor-pointer"
               aria-label="Close cart"
             >
               <X className="w-5 h-5" />
