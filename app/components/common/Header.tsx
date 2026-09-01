@@ -27,12 +27,27 @@ export const Header: React.FC<HeaderProps> = ({
   const location = useLocation();
   const fetcher = useFetcher<{ products: ProductCardItem[]; totalCount: number }>();
 
-  // Scroll listener
+  // Scroll listener with hysteresis and RAF throttling to eliminate layout-shift flickering
   useEffect(() => {
+    let ticking = false;
+
     const handleScroll = () => {
-      setIsScrolled(window.scrollY > 20);
+      if (!ticking) {
+        window.requestAnimationFrame(() => {
+          const currentY = window.scrollY;
+          // Hysteresis dead-zone: activate at > 50px, deactivate only below 15px
+          setIsScrolled((prev) => {
+            if (!prev && currentY > 50) return true;
+            if (prev && currentY < 15) return false;
+            return prev;
+          });
+          ticking = false;
+        });
+        ticking = true;
+      }
     };
-    window.addEventListener('scroll', handleScroll);
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
@@ -104,12 +119,12 @@ export const Header: React.FC<HeaderProps> = ({
     <header className="sticky top-0 z-40 w-full" style={{ fontFamily: "'DM Sans', sans-serif" }}>
       <AnnouncementBar />
 
-      {/* Main Nav Bar */}
+      {/* Main Nav Bar with stable height to eliminate layout-shift flickering */}
       <div
-        className={`w-full transition-all duration-300 ease-out border-b border-[#e8e4df] ${
+        className={`w-full py-3.5 md:py-4 transition-[background-color,box-shadow,border-color] duration-200 ease-out border-b ${
           isScrolled
-            ? 'shadow-sm py-2.5 bg-[#faf8f5]/92 backdrop-blur-md'
-            : 'py-4 bg-[#faf8f5]'
+            ? 'shadow-xs bg-[#faf8f5]/95 backdrop-blur-md border-[#e8e4df]'
+            : 'bg-[#faf8f5] border-[#e8e4df]'
         }`}
       >
         <div className="max-w-[1400px] mx-auto px-6 md:px-12 flex items-center justify-between gap-4">
