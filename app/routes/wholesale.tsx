@@ -1,9 +1,4 @@
-import React, { useState } from 'react';
 import { type MetaFunction } from 'react-router';
-import { Breadcrumb } from '~/components/ui/Breadcrumb';
-import { Input } from '~/components/ui/Input';
-import { Button } from '~/components/ui/Button';
-import { CheckCircle2, Building2 } from 'lucide-react';
 
 export const meta: MetaFunction = () => {
   return [
@@ -11,6 +6,57 @@ export const meta: MetaFunction = () => {
     { name: 'description', content: 'Stock artisanal handcrafted MONTS collections in your boutique or luxury store.' },
   ];
 };
+
+export default function WholesaleRoute() {
+  return (
+    <div
+      style={{
+        minHeight: '60vh',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: '1rem',
+        padding: '4rem 1.5rem',
+        textAlign: 'center',
+      }}
+    >
+      <h1
+        style={{
+          fontFamily: "'Playfair Display', serif",
+          fontSize: 'clamp(2rem, 5vw, 3.5rem)',
+          fontWeight: 700,
+          color: '#060505',
+          letterSpacing: '0.02em',
+          margin: 0,
+        }}
+      >
+        Coming Soon
+      </h1>
+      <p
+        style={{
+          fontFamily: "'Cormorant', serif",
+          fontSize: 'clamp(1rem, 2.5vw, 1.35rem)',
+          color: '#686764',
+          maxWidth: '480px',
+          margin: 0,
+        }}
+      >
+        Our wholesale &amp; B2B program is launching shortly. Stay tuned.
+      </p>
+    </div>
+  );
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   WHOLESALE PAGE – ORIGINAL CONTENT (commented out, preserved for later use)
+   ─────────────────────────────────────────────────────────────────────────────
+
+import React, { useState } from 'react';
+import { Breadcrumb } from '~/components/ui/Breadcrumb';
+import { Input } from '~/components/ui/Input';
+import { Button } from '~/components/ui/Button';
+import { CheckCircle2, Building2 } from 'lucide-react';
 
 export default function WholesaleRoute() {
   const [submitted, setSubmitted] = useState(false);
@@ -34,7 +80,8 @@ export default function WholesaleRoute() {
             className="text-base text-[#686764]"
             style={{ fontFamily: "'Cormorant', serif", fontSize: '1.25rem' }}
           >
-            We collaborate with selected concept stores, luxury boutiques, and global retailers who share our passion for artisanal textiles and conscious design.
+            We collaborate with selected concept stores, luxury boutiques, and global retailers
+            who share our passion for artisanal textiles and conscious design.
           </p>
         </div>
 
@@ -42,15 +89,25 @@ export default function WholesaleRoute() {
           {submitted ? (
             <div className="flex flex-col items-center justify-center text-center py-10 gap-3">
               <CheckCircle2 className="w-12 h-12 text-[#8b7355]" />
-              <h3 className="text-xl font-bold text-[#060505]" style={{ fontFamily: "'Playfair Display', serif" }}>
+              <h3
+                className="text-xl font-bold text-[#060505]"
+                style={{ fontFamily: "'Playfair Display', serif" }}
+              >
                 Wholesale Application Received
               </h3>
-              <p className="text-sm text-[#686764]" style={{ fontFamily: "'Cormorant', serif", fontSize: '1.15rem' }}>
-                Thank you for your interest. Our wholesale team will review your details and send our line sheet within 2 business days.
+              <p
+                className="text-sm text-[#686764]"
+                style={{ fontFamily: "'Cormorant', serif", fontSize: '1.15rem' }}
+              >
+                Thank you for your interest. Our wholesale team will review your details and send
+                our line sheet within 2 business days.
               </p>
             </div>
           ) : (
-            <form onSubmit={(e) => { e.preventDefault(); setSubmitted(true); }} className="flex flex-col gap-5">
+            <form
+              onSubmit={(e) => { e.preventDefault(); setSubmitted(true); }}
+              className="flex flex-col gap-5"
+            >
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <Input label="Contact Name" required placeholder="Full Name" />
                 <Input label="Business Email" type="email" required placeholder="buyer@boutique.com" />
@@ -61,7 +118,9 @@ export default function WholesaleRoute() {
               </div>
               <Input label="Store Location (City & Country)" required placeholder="City, Country" />
               <div className="flex flex-col gap-1.5" style={{ fontFamily: "'DM Sans', sans-serif" }}>
-                <label className="text-xs font-semibold text-[#060505]">Tell Us About Your Store & Aesthetic</label>
+                <label className="text-xs font-semibold text-[#060505]">
+                  Tell Us About Your Store & Aesthetic
+                </label>
                 <textarea
                   required
                   rows={4}
@@ -79,3 +138,4 @@ export default function WholesaleRoute() {
     </div>
   );
 }
+─────────────────────────────────────────────────────────────────────────────── */
