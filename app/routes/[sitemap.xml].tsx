@@ -30,7 +30,7 @@ export async function loader({ request, context }: LoaderFunctionArgs) {
 
   try {
     const data = await storefront.query(SITEMAP_QUERY, {
-      cache: storefront.CacheLong(),
+      cache: storefront.CacheShort(),
     });
     products = data.products?.nodes || [];
     collections = data.collections?.nodes || [];

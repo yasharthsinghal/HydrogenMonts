@@ -47,6 +47,9 @@ declare global {
     RESEND_API_KEY?: string;
     RESEND_FROM_EMAIL?: string;
 
+    // Contact Form Inquiries Recipient
+    CONTACT_EMAIL_RECIPIENT?: string;
+
     // Discounts
     PREPAID_DISCOUNT_CODE?: string;
 

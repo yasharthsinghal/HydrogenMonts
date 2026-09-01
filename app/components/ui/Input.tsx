@@ -16,8 +16,9 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
     return (
       <div className="w-full flex flex-col gap-1.5" style={{ fontFamily: "'DM Sans', sans-serif" }}>
         {label && (
-          <label htmlFor={inputId} className="text-xs font-semibold text-[#060505] tracking-wide">
-            {label}
+          <label htmlFor={inputId} className="text-xs font-semibold text-[#060505] tracking-wide flex items-center gap-1">
+            <span>{label}</span>
+            {props.required && <span className="text-[#dc2626] font-semibold" aria-hidden="true">*</span>}
           </label>
         )}
         <div className="relative flex items-center">

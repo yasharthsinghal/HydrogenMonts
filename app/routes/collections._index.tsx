@@ -24,7 +24,7 @@ export async function loader({ context, request }: LoaderFunctionArgs) {
   try {
     const data = await storefront.query(COLLECTIONS_QUERY, {
       variables: { first: 20 },
-      cache: storefront.CacheLong(),
+      cache: storefront.CacheNone(),
     });
     collections = (data.collections?.nodes || []) as CollectionCardItem[];
   } catch (error) {

@@ -1,6 +1,6 @@
 import { ResendEmailProvider } from './resend.server';
 import { GoogleSmtpEmailProvider } from './smtp.server';
-import type { SendOtpOptions, SendOrderConfirmationOptions, EmailProviderResult } from './types';
+import type { SendOtpOptions, SendOrderConfirmationOptions, SendContactInquiryOptions, EmailProviderResult } from './types';
 
 const resendProvider = new ResendEmailProvider();
 const smtpProvider = new GoogleSmtpEmailProvider();
@@ -80,6 +80,47 @@ export async function dispatchOrderConfirmationEmail(
   console.info(`📧 Target: ${options.to}`);
   console.info(`🏷️  Order: ${options.orderName}`);
   console.info(`💳 Payment: ${options.paymentMethod}`);
+  console.info(`======================================================\n`);
+
+  return {
+    success: true,
+    provider: 'console_dev',
+  };
+}
+
+export async function dispatchContactInquiryEmail(
+  options: SendContactInquiryOptions,
+  env: Env,
+): Promise<EmailProviderResult> {
+  const isGoogleSmtpEnabled =
+    env.ENABLE_GOOGLE_SMTP === 'true' ||
+    env.OTP_EMAIL_PROVIDER === 'smtp' ||
+    env.OTP_EMAIL_PROVIDER === 'google_smtp';
+
+  const isResendEnabled =
+    env.ENABLE_RESEND === 'true' || env.OTP_EMAIL_PROVIDER === 'resend';
+
+  console.info(`[Email Dispatcher - Contact Inquiry] From: ${options.fullName} (${options.email}) | To: ${options.to}`);
+
+  if (isGoogleSmtpEnabled) {
+    const smtpResult = await smtpProvider.sendContactInquiry(options, env);
+    if (smtpResult.success) return smtpResult;
+    console.warn(`[Email Dispatcher - Contact Inquiry] SMTP failed: ${smtpResult.error}. Checking fallback.`);
+  }
+
+  if (isResendEnabled || (!isGoogleSmtpEnabled && env.RESEND_API_KEY && !env.RESEND_API_KEY.includes('PASTE_YOUR'))) {
+    const resendResult = await resendProvider.sendContactInquiry(options, env);
+    if (resendResult.success) return resendResult;
+    console.warn(`[Email Dispatcher - Contact Inquiry] Resend failed: ${resendResult.error}.`);
+  }
+
+  console.info(`\n======================================================`);
+  console.info(`📬 [MONTS CONTACT INQUIRY — Development Mode]`);
+  console.info(`📧 Recipient: ${options.to}`);
+  console.info(`👤 Customer: ${options.fullName} (${options.email})`);
+  console.info(`📞 Phone: ${options.phone}`);
+  console.info(`📝 Subject: ${options.subject}`);
+  console.info(`💬 Message: ${options.message}`);
   console.info(`======================================================\n`);
 
   return {

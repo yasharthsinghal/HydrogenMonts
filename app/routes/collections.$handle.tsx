@@ -67,7 +67,7 @@ export async function loader({ params, request, context }: LoaderFunctionArgs) {
           sortKey: allSortKey,
           reverse,
         },
-        cache: storefront.CacheShort(),
+        cache: storefront.CacheNone(),
       });
 
       const products = (data?.products?.nodes || []) as ProductCardItem[];
@@ -128,7 +128,7 @@ export async function loader({ params, request, context }: LoaderFunctionArgs) {
         sortKey,
         reverse,
       },
-      cache: storefront.CacheShort(),
+      cache: storefront.CacheNone(),
     });
     collection = data.collection;
   } catch (error) {

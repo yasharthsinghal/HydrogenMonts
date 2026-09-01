@@ -39,7 +39,7 @@ export async function loader({ request, context }: LoaderFunctionArgs) {
         collectionsFirst: 3,
         productsFirst: 8,
       },
-      cache: storefront.CacheLong(),
+      cache: storefront.CacheNone(),
     });
     homepageData = response;
   } catch (error) {

@@ -60,14 +60,14 @@ export async function loader({ params, request, context }: LoaderFunctionArgs) {
     try {
         const data = await storefront.query(PRODUCT_BY_HANDLE_QUERY, {
             variables: { handle },
-            cache: storefront.CacheShort(),
+            cache: storefront.CacheNone(),
         });
         product = data.product;
 
         if (product?.id) {
             const recData = await storefront.query(RECOMMENDED_PRODUCTS_QUERY, {
                 variables: { productId: product.id },
-                cache: storefront.CacheShort(),
+                cache: storefront.CacheNone(),
             });
             recommendedProducts = (recData.productRecommendations ||
                 []) as ProductCardItem[];
