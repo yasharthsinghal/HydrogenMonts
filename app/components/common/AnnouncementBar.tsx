@@ -25,7 +25,7 @@ export const AnnouncementBar: React.FC = () => {
 
   return (
     <div
-      className="w-full py-2.5 px-4 text-center text-xs font-medium tracking-wide text-white overflow-hidden"
+      className="w-full py-2 px-4 text-center text-[11px] sm:text-xs font-medium tracking-wide text-white overflow-hidden leading-snug"
       style={{
         backgroundColor: '#1a1a1a',
         fontFamily: "'DM Sans', sans-serif",

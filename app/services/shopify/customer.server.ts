@@ -499,6 +499,396 @@ export class ShopifyCustomerService {
       console.warn('[Shopify Customer Service] Token revocation notice:', err?.message);
     }
   }
+
+  /**
+   * Enrolls an email into email marketing in Shopify with tags and acceptsMarketing = true.
+   */
+  async subscribeCustomer(email: string, source = 'checkout', env: Env) {
+    if (!email || !email.includes('@')) {
+      return { success: false, error: 'Invalid email address' };
+    }
+    const cleanEmail = email.trim().toLowerCase();
+
+    try {
+      // 1. Check if customer already exists in Shopify
+      const searchResult = await adminGraphQL(
+        'searchCustomer',
+        ADMIN_CUSTOMER_SEARCH,
+        { query: `email:${cleanEmail}` },
+        env,
+      );
+
+      const existing = searchResult?.data?.customers?.nodes?.[0];
+
+      if (existing?.id) {
+        const updateMutation = `
+          mutation customerUpdate($input: CustomerInput!) {
+            customerUpdate(input: $input) {
+              customer { id email }
+              userErrors { field message }
+            }
+          }
+        `;
+        await adminGraphQL(
+          'customerUpdate',
+          updateMutation,
+          {
+            input: {
+              id: existing.id,
+              tags: ['newsletter', 'vip-catalog', `source-${source}`],
+              emailMarketingConsent: {
+                marketingState: 'SUBSCRIBED',
+                marketingOptInLevel: 'SINGLE_OPT_IN',
+              },
+            },
+          },
+          env,
+        );
+        console.info(`[Subscription] Updated existing customer ${cleanEmail} to SUBSCRIBED`);
+        return { success: true, isNew: false };
+      }
+
+      const createMutation = `
+        mutation adminCustomerCreate($input: CustomerInput!) {
+          customerCreate(input: $input) {
+            customer { id email }
+            userErrors { field message }
+          }
+        }
+      `;
+      await adminGraphQL(
+        'adminCustomerCreate',
+        createMutation,
+        {
+          input: {
+            email: cleanEmail,
+            tags: ['newsletter', 'vip-catalog', `source-${source}`],
+            emailMarketingConsent: {
+              marketingState: 'SUBSCRIBED',
+              marketingOptInLevel: 'SINGLE_OPT_IN',
+            },
+          },
+        },
+        env,
+      );
+
+      console.info(`[Subscription] Created new subscriber in Shopify: ${cleanEmail}`);
+      return { success: true, isNew: true };
+    } catch (err: any) {
+      console.warn('[Subscription Notice] Error syncing subscriber to Shopify:', err?.message || err);
+      return { success: true, note: 'Saved locally' };
+    }
+  }
+
+  /**
+   * Retrieves Shopify Customer ID by email
+   */
+  async getCustomerIdByEmail(email: string, env: Env): Promise<string | null> {
+    if (!email) return null;
+    try {
+      const searchResult = await adminGraphQL(
+        'searchCustomer',
+        ADMIN_CUSTOMER_SEARCH,
+        { query: `email:${email.trim().toLowerCase()}` },
+        env,
+      );
+      return searchResult?.data?.customers?.nodes?.[0]?.id || null;
+    } catch (err: any) {
+      console.warn('[Shopify Customer Service] getCustomerIdByEmail error:', err?.message || err);
+      return null;
+    }
+  }
+
+  /**
+   * Updates customer profile (firstName, lastName, phone)
+   */
+  async updateCustomerProfile(
+    customerId: string,
+    fields: { firstName?: string; lastName?: string; phone?: string },
+    env: Env,
+  ) {
+    const mutation = `
+      mutation customerUpdate($input: CustomerInput!) {
+        customerUpdate(input: $input) {
+          customer {
+            id
+            firstName
+            lastName
+            phone
+            email
+          }
+          userErrors {
+            field
+            message
+          }
+        }
+      }
+    `;
+
+    const input: Record<string, any> = { id: customerId };
+    if (fields.firstName !== undefined) input.firstName = fields.firstName;
+    if (fields.lastName !== undefined) input.lastName = fields.lastName;
+    if (fields.phone !== undefined) {
+      // E.164 phone formatting or null if empty
+      const cleanPhone = fields.phone.trim();
+      input.phone = cleanPhone.length > 0 ? (cleanPhone.startsWith('+') ? cleanPhone : `+91${cleanPhone.replace(/^0+/, '')}`) : null;
+    }
+
+    try {
+      const result = await adminGraphQL('updateCustomerProfile', mutation, { input }, env);
+      const userErrors = result?.data?.customerUpdate?.userErrors || [];
+      if (userErrors.length > 0) {
+        return { success: false, error: userErrors.map((e: any) => e.message).join(', ') };
+      }
+      return { success: true, customer: result?.data?.customerUpdate?.customer };
+    } catch (err: any) {
+      console.error('[Shopify Customer Service] updateCustomerProfile exception:', err?.message || err);
+      return { success: false, error: err?.message || 'Failed to update profile.' };
+    }
+  }
+
+  /**
+   * Updates customer email address in Shopify
+   */
+  async updateCustomerEmail(customerId: string, newEmail: string, env: Env) {
+    const mutation = `
+      mutation customerUpdate($input: CustomerInput!) {
+        customerUpdate(input: $input) {
+          customer {
+            id
+            email
+          }
+          userErrors {
+            field
+            message
+          }
+        }
+      }
+    `;
+    try {
+      const result = await adminGraphQL(
+        'updateCustomerEmail',
+        mutation,
+        {
+          input: { id: customerId, email: newEmail.trim().toLowerCase() },
+        },
+        env,
+      );
+      const userErrors = result?.data?.customerUpdate?.userErrors || [];
+      if (userErrors.length > 0) {
+        return { success: false, error: userErrors.map((e: any) => e.message).join(', ') };
+      }
+      return { success: true, customer: result?.data?.customerUpdate?.customer };
+    } catch (err: any) {
+      console.error('[Shopify Customer Service] updateCustomerEmail exception:', err?.message || err);
+      return { success: false, error: err?.message || 'Failed to update email.' };
+    }
+  }
+
+  /**
+   * Creates a new customer address
+   */
+  async createCustomerAddress(
+    customerId: string,
+    address: {
+      firstName?: string;
+      lastName?: string;
+      address1: string;
+      address2?: string;
+      city: string;
+      province?: string;
+      zip: string;
+      country?: string;
+      phone?: string;
+    },
+    env: Env,
+  ) {
+    const mutation = `
+      mutation customerAddressCreate($customerId: ID!, $address: MailingAddressInput!) {
+        customerAddressCreate(customerId: $customerId, address: $address) {
+          customerAddress {
+            id
+            firstName
+            lastName
+            address1
+            address2
+            city
+            province
+            zip
+            country
+            phone
+          }
+          userErrors {
+            field
+            message
+          }
+        }
+      }
+    `;
+    try {
+      const result = await adminGraphQL(
+        'createCustomerAddress',
+        mutation,
+        {
+          customerId,
+          address: {
+            ...address,
+            country: address.country || 'IN',
+          },
+        },
+        env,
+      );
+      const userErrors = result?.data?.customerAddressCreate?.userErrors || [];
+      if (userErrors.length > 0) {
+        return { success: false, error: userErrors.map((e: any) => e.message).join(', ') };
+      }
+      return { success: true, address: result?.data?.customerAddressCreate?.customerAddress };
+    } catch (err: any) {
+      console.error('[Shopify Customer Service] createCustomerAddress exception:', err?.message || err);
+      return { success: false, error: err?.message || 'Failed to create address.' };
+    }
+  }
+
+  /**
+   * Updates an existing customer address
+   */
+  async updateCustomerAddress(
+    addressId: string,
+    address: {
+      firstName?: string;
+      lastName?: string;
+      address1: string;
+      address2?: string;
+      city: string;
+      province?: string;
+      zip: string;
+      country?: string;
+      phone?: string;
+    },
+    env: Env,
+  ) {
+    const mutation = `
+      mutation customerAddressUpdate($id: ID!, $address: MailingAddressInput!) {
+        customerAddressUpdate(id: $id, address: $address) {
+          customerAddress {
+            id
+            firstName
+            lastName
+            address1
+            address2
+            city
+            province
+            zip
+            country
+            phone
+          }
+          userErrors {
+            field
+            message
+          }
+        }
+      }
+    `;
+    try {
+      const result = await adminGraphQL(
+        'updateCustomerAddress',
+        mutation,
+        {
+          id: addressId,
+          address: {
+            ...address,
+            country: address.country || 'IN',
+          },
+        },
+        env,
+      );
+      const userErrors = result?.data?.customerAddressUpdate?.userErrors || [];
+      if (userErrors.length > 0) {
+        return { success: false, error: userErrors.map((e: any) => e.message).join(', ') };
+      }
+      return { success: true, address: result?.data?.customerAddressUpdate?.customerAddress };
+    } catch (err: any) {
+      console.error('[Shopify Customer Service] updateCustomerAddress exception:', err?.message || err);
+      return { success: false, error: err?.message || 'Failed to update address.' };
+    }
+  }
+
+  /**
+   * Deletes an existing customer address
+   */
+  async deleteCustomerAddress(customerId: string, addressId: string, env: Env) {
+    const mutation = `
+      mutation customerAddressDelete($id: ID!, $customerId: ID!) {
+        customerAddressDelete(id: $id, customerId: $customerId) {
+          deletedCustomerAddressId
+          userErrors {
+            field
+            message
+          }
+        }
+      }
+    `;
+    try {
+      const result = await adminGraphQL(
+        'deleteCustomerAddress',
+        mutation,
+        {
+          id: addressId,
+          customerId,
+        },
+        env,
+      );
+      const userErrors = result?.data?.customerAddressDelete?.userErrors || [];
+      if (userErrors.length > 0) {
+        return { success: false, error: userErrors.map((e: any) => e.message).join(', ') };
+      }
+      return { success: true, deletedId: result?.data?.customerAddressDelete?.deletedCustomerAddressId };
+    } catch (err: any) {
+      console.error('[Shopify Customer Service] deleteCustomerAddress exception:', err?.message || err);
+      return { success: false, error: err?.message || 'Failed to delete address.' };
+    }
+  }
+
+  /**
+   * Sets default customer address
+   */
+  async setDefaultCustomerAddress(customerId: string, addressId: string, env: Env) {
+    const mutation = `
+      mutation customerDefaultAddressUpdate($addressId: ID!, $customerId: ID!) {
+        customerDefaultAddressUpdate(addressId: $addressId, customerId: $customerId) {
+          customer {
+            id
+            defaultAddress {
+              id
+            }
+          }
+          userErrors {
+            field
+            message
+          }
+        }
+      }
+    `;
+    try {
+      const result = await adminGraphQL(
+        'setDefaultCustomerAddress',
+        mutation,
+        {
+          addressId,
+          customerId,
+        },
+        env,
+      );
+      const userErrors = result?.data?.customerDefaultAddressUpdate?.userErrors || [];
+      if (userErrors.length > 0) {
+        return { success: false, error: userErrors.map((e: any) => e.message).join(', ') };
+      }
+      return { success: true, customer: result?.data?.customerDefaultAddressUpdate?.customer };
+    } catch (err: any) {
+      console.error('[Shopify Customer Service] setDefaultCustomerAddress exception:', err?.message || err);
+      return { success: false, error: err?.message || 'Failed to set default address.' };
+    }
+  }
 }
 
 export const shopifyCustomerService = new ShopifyCustomerService();

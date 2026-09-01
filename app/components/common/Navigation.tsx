@@ -93,7 +93,7 @@ export const Navigation: React.FC = () => {
           return (
             <div
               key={item.href}
-              className="relative py-2"
+              className="relative py-1"
               onMouseEnter={handleMouseEnter}
               onMouseLeave={handleMouseLeave}
             >

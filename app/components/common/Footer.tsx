@@ -1,15 +1,20 @@
 import React, { useState } from 'react';
-import { Link } from 'react-router';
-import { Mail, CheckCircle2, Phone, MapPin, Clock, MessageSquare } from 'lucide-react';
+import { Link, useFetcher } from 'react-router';
+import { Mail, CheckCircle2, Phone, MapPin, Clock, MessageSquare, Loader2, Sparkles } from 'lucide-react';
 
 export const Footer: React.FC = () => {
   const [email, setEmail] = useState('');
-  const [subscribed, setSubscribed] = useState(false);
+  const fetcher = useFetcher<{ success?: boolean; message?: string; error?: string }>();
+  const isSubmitting = fetcher.state !== 'idle';
+  const isSuccess = fetcher.data?.success === true;
 
   const handleSubscribe = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email || !email.includes('@')) return;
-    setSubscribed(true);
+    if (!email || !email.includes('@') || isSubmitting) return;
+    fetcher.submit(
+      { email, source: 'footer_newsletter' },
+      { method: 'POST', action: '/api/subscribe' },
+    );
   };
 
   return (
@@ -23,53 +28,70 @@ export const Footer: React.FC = () => {
             style={{ borderBottom: '1px solid rgba(255,255,255,0.1)' }}
           >
             <div>
-              <p className="text-xs uppercase tracking-[0.2em] mb-2 font-medium" style={{ color: '#8b7355' }}>
-                Stay in touch
+              <p className="text-xs uppercase tracking-[0.2em] mb-2 font-medium flex items-center gap-1.5 text-[#8b7355]">
+                <Sparkles className="w-3.5 h-3.5 text-[#c4622d]" />
+                <span>Collector's Circle</span>
               </p>
               <h3
                 className="text-2xl font-bold mb-2 text-white"
                 style={{ fontFamily: "'Playfair Display', serif" }}
               >
-                Exclusive offers straight to your inbox
+                Exclusive drops & private catalogs straight to your inbox
               </h3>
               <p className="text-sm" style={{ color: 'rgba(255,255,255,0.6)', fontFamily: "'Cormorant', serif", fontSize: '1.1rem' }}>
-                Join to get special seasonal offers, artisanal previews, and limited release announcements.
+                Join to get secret seasonal lookbooks, early access to limited artisanal batches, and festive privilege codes.
               </p>
             </div>
-            <form onSubmit={handleSubscribe} className="flex flex-col sm:flex-row gap-3">
-              {subscribed ? (
-                <div className="flex items-center gap-2 text-sm py-3 text-[#8b7355]">
-                  <CheckCircle2 className="w-5 h-5" />
-                  Thank you for subscribing to MONTS!
-                </div>
-              ) : (
-                <>
-                  <div className="relative flex-1">
-                    <Mail
-                      className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2"
-                      style={{ color: 'rgba(255,255,255,0.4)' }}
-                    />
-                    <input
-                      type="email"
-                      required
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      placeholder="Enter your email address"
-                      className="w-full pl-10 pr-4 py-3 text-sm focus:outline-none rounded-[6px]"
-                      style={{
-                        backgroundColor: 'rgba(255,255,255,0.07)',
-                        border: '1px solid rgba(255,255,255,0.15)',
-                        color: '#ffffff',
-                      }}
-                    />
+            <form onSubmit={handleSubscribe} className="flex flex-col gap-2">
+              <div className="flex flex-col sm:flex-row gap-3">
+                {isSuccess ? (
+                  <div className="flex items-center gap-2.5 text-sm py-3 px-4 rounded-[6px] bg-white/5 border border-[#8b7355]/40 text-[#dac7b4] w-full animate-in fade-in">
+                    <CheckCircle2 className="w-5 h-5 text-[#c4622d] shrink-0" />
+                    <span className="leading-snug">
+                      {fetcher.data?.message || 'Welcome to the MONTS Collector’s Circle! Check your inbox.'}
+                    </span>
                   </div>
-                  <button
-                    type="submit"
-                    className="px-7 py-3 text-sm font-semibold rounded-[6px] transition-colors bg-[#c4622d] text-white hover:bg-[#923f12] cursor-pointer shrink-0"
-                  >
-                    Subscribe
-                  </button>
-                </>
+                ) : (
+                  <>
+                    <div className="relative flex-1">
+                      <Mail
+                        className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2"
+                        style={{ color: 'rgba(255,255,255,0.4)' }}
+                      />
+                      <input
+                        type="email"
+                        required
+                        disabled={isSubmitting}
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        placeholder="Enter your email address"
+                        className="w-full pl-10 pr-4 py-3 text-sm focus:outline-none rounded-[6px] disabled:opacity-50"
+                        style={{
+                          backgroundColor: 'rgba(255,255,255,0.07)',
+                          border: '1px solid rgba(255,255,255,0.15)',
+                          color: '#ffffff',
+                        }}
+                      />
+                    </div>
+                    <button
+                      type="submit"
+                      disabled={isSubmitting}
+                      className="px-7 py-3 text-sm font-semibold rounded-[6px] transition-all bg-[#c4622d] text-white hover:bg-[#923f12] active:scale-95 disabled:opacity-60 cursor-pointer shrink-0 flex items-center justify-center gap-2"
+                    >
+                      {isSubmitting ? (
+                        <>
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                          <span>Joining...</span>
+                        </>
+                      ) : (
+                        <span>Join Circle</span>
+                      )}
+                    </button>
+                  </>
+                )}
+              </div>
+              {fetcher.data?.error && (
+                <p className="text-xs text-red-400 pl-1">{fetcher.data.error}</p>
               )}
             </form>
           </div>

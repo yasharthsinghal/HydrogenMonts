@@ -1,13 +1,28 @@
-import { redirect, useLoaderData, Link, type MetaFunction, type LoaderFunctionArgs } from 'react-router';
-import { useState } from 'react';
+import { redirect, useLoaderData, useRevalidator, useFetcher, Link, type MetaFunction, type LoaderFunctionArgs } from 'react-router';
+import { useState, useEffect } from 'react';
 import { STOREFRONT_CUSTOMER_QUERY } from '~/graphql/StorefrontQueries';
 import { Breadcrumb } from '~/components/ui/Breadcrumb';
 import { Button } from '~/components/ui/Button';
 import { Badge } from '~/components/ui/Badge';
 import { Tabs } from '~/components/ui/Tabs';
 import { EmptyState } from '~/components/ui/EmptyState';
-import { Package, MapPin, LogOut, Calendar, ShieldCheck, Mail, AlertCircle, ArrowRight, ExternalLink } from 'lucide-react';
+import {
+  Package,
+  MapPin,
+  LogOut,
+  Calendar,
+  ShieldCheck,
+  Mail,
+  AlertCircle,
+  ArrowRight,
+  ExternalLink,
+  Edit3,
+  Plus,
+} from 'lucide-react';
 import { shopifyCustomerService } from '~/services/shopify/customer.server';
+import { ProfileEditModal } from '~/components/account/ProfileEditModal';
+import { EmailChangeModal } from '~/components/account/EmailChangeModal';
+import { AddressFormModal } from '~/components/account/AddressFormModal';
 
 export const meta: MetaFunction = () => [
   { title: 'My Account | MONTS' },
@@ -46,6 +61,27 @@ export default function AccountIndexRoute() {
     customer: any;
   };
   const [activeTab, setActiveTab] = useState('orders');
+  const revalidator = useRevalidator();
+  const addressActionFetcher = useFetcher<{ success?: boolean; error?: string }>();
+
+  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
+  const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
+  const [isAddressModalOpen, setIsAddressModalOpen] = useState(false);
+  const [addressModalMode, setAddressModalMode] = useState<'add' | 'edit'>('add');
+  const [selectedAddress, setSelectedAddress] = useState<any>(undefined);
+
+  useEffect(() => {
+    if (addressActionFetcher.data?.success) {
+      revalidator.revalidate();
+    }
+  }, [addressActionFetcher.data]);
+
+  const handleSetDefaultAddress = (addressId: string) => {
+    addressActionFetcher.submit(
+      { intent: 'set-default', addressId },
+      { method: 'POST', action: '/api/account/address' },
+    );
+  };
 
   const orders = customer?.orders?.nodes ?? [];
   const recordedOrderCount = Number(customer?.numberOfOrders) || 0;
@@ -97,19 +133,45 @@ export default function AccountIndexRoute() {
                 OTP Verified
               </span>
             </div>
-            <p className="text-xs text-[#686764] mt-1 flex items-center gap-1.5">
-              <Mail className="w-3.5 h-3.5 text-[#8b7355]" />
-              {customerEmail}
-            </p>
+            <div className="flex items-center gap-2.5 mt-1.5 flex-wrap text-xs text-[#686764]">
+              <span className="flex items-center gap-1.5">
+                <Mail className="w-3.5 h-3.5 text-[#8b7355]" />
+                {customerEmail}
+              </span>
+              <button
+                type="button"
+                onClick={() => setIsEmailModalOpen(true)}
+                className="text-[11px] text-[#c4622d] hover:text-[#923f12] underline cursor-pointer font-medium"
+              >
+                Change Email
+              </button>
+              {customer?.phone && (
+                <span className="text-[#686764]">
+                  • 📞 {customer.phone}
+                </span>
+              )}
+            </div>
           </div>
         </div>
 
-        <Link to="/account/logout">
-          <Button variant="outline" size="sm" className="flex items-center gap-1.5 cursor-pointer">
-            <LogOut className="w-3.5 h-3.5" />
-            Sign Out
+        <div className="flex items-center gap-2.5 self-stretch sm:self-center justify-end flex-wrap">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setIsProfileModalOpen(true)}
+            className="flex items-center gap-1.5 cursor-pointer bg-white text-[#060505] hover:bg-[#f0edea]"
+          >
+            <Edit3 className="w-3.5 h-3.5 text-[#c4622d]" />
+            Edit Profile
           </Button>
-        </Link>
+
+          <Link to="/account/logout">
+            <Button variant="outline" size="sm" className="flex items-center gap-1.5 cursor-pointer text-[#686764] hover:text-[#060505]">
+              <LogOut className="w-3.5 h-3.5" />
+              Sign Out
+            </Button>
+          </Link>
+        </div>
       </div>
 
       {/* Tabs */}
@@ -250,32 +312,146 @@ export default function AccountIndexRoute() {
             id: 'addresses',
             label: 'Saved Addresses',
             count: addresses.length,
-            content: addresses.length === 0 ? (
-              <EmptyState
-                icon={<MapPin className="w-8 h-8" />}
-                title="No Saved Addresses"
-                description="Your shipping addresses are saved automatically after your first checkout."
-                actionText="Browse Collection"
-                actionHref="/collections/all"
-              />
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {addresses.map((addr: any) => (
-                  <div key={addr.id} className="bg-white rounded-[6px] border border-[#e8e4df] p-5 flex flex-col gap-2 shadow-sm text-xs text-[#686764]">
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="font-bold text-sm text-[#060505]">{addr.firstName} {addr.lastName}</span>
-                      {addr.id === defaultAddressId && <Badge variant="default">Default</Badge>}
-                    </div>
-                    {addr.address1 && <span>{addr.address1}</span>}
-                    {addr.address2 && <span>{addr.address2}</span>}
-                    <span>{addr.city}{addr.province ? `, ${addr.province}` : ''} {addr.zip}</span>
-                    {addr.phone && <span className="text-[#060505] font-medium">📞 {addr.phone}</span>}
+            content: (
+              <div className="flex flex-col gap-6">
+                <div className="flex items-center justify-between pb-2 border-b border-[#e8e4df]">
+                  <div>
+                    <h2 className="text-base font-bold text-[#060505]" style={{ fontFamily: "'Playfair Display', serif" }}>
+                      Shipping Addresses
+                    </h2>
+                    <p className="text-xs text-[#686764]">
+                      Manage saved delivery addresses for faster checkout.
+                    </p>
                   </div>
-                ))}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      setSelectedAddress(undefined);
+                      setAddressModalMode('add');
+                      setIsAddressModalOpen(true);
+                    }}
+                    className="flex items-center gap-1.5 cursor-pointer text-xs bg-white text-[#060505] hover:bg-[#f0edea]"
+                  >
+                    <Plus className="w-3.5 h-3.5 text-[#c4622d]" />
+                    <span>Add Address</span>
+                  </Button>
+                </div>
+
+                {addresses.length === 0 ? (
+                  <div className="bg-white rounded-[8px] border border-[#e8e4df] p-8 text-center flex flex-col items-center justify-center gap-3">
+                    <div className="w-12 h-12 rounded-full bg-[#c4622d]/10 text-[#c4622d] flex items-center justify-center">
+                      <MapPin className="w-6 h-6" />
+                    </div>
+                    <h3 className="text-lg font-bold text-[#060505]" style={{ fontFamily: "'Playfair Display', serif" }}>
+                      No Saved Addresses Yet
+                    </h3>
+                    <p className="text-xs text-[#686764] max-w-sm">
+                      Add your preferred delivery address now so future orders are seamless and quick.
+                    </p>
+                    <Button
+                      variant="primary"
+                      size="sm"
+                      onClick={() => {
+                        setSelectedAddress(undefined);
+                        setAddressModalMode('add');
+                        setIsAddressModalOpen(true);
+                      }}
+                      className="mt-2 flex items-center gap-1.5 cursor-pointer"
+                    >
+                      <Plus className="w-4 h-4" />
+                      <span>Add Shipping Address</span>
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {addresses.map((addr: any) => (
+                      <div
+                        key={addr.id}
+                        className="bg-white rounded-[6px] border border-[#e8e4df] p-5 flex flex-col justify-between gap-3 shadow-sm text-xs text-[#686764] transition-shadow hover:shadow-md"
+                      >
+                        <div className="flex flex-col gap-1.5">
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="font-bold text-sm text-[#060505]">
+                              {addr.firstName} {addr.lastName}
+                            </span>
+                            {addr.id === defaultAddressId && (
+                              <Badge variant="default">Default</Badge>
+                            )}
+                          </div>
+                          {addr.address1 && <span className="text-[#2c2c2c]">{addr.address1}</span>}
+                          {addr.address2 && <span>{addr.address2}</span>}
+                          <span>
+                            {addr.city}
+                            {addr.province ? `, ${addr.province}` : ''} {addr.zip}
+                          </span>
+                          {addr.phone && (
+                            <span className="text-[#060505] font-medium pt-1">
+                              📞 {addr.phone}
+                            </span>
+                          )}
+                        </div>
+
+                        <div className="flex items-center justify-between pt-3 border-t border-[#e8e4df] mt-1">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setSelectedAddress({
+                                ...addr,
+                                isDefault: addr.id === defaultAddressId,
+                              });
+                              setAddressModalMode('edit');
+                              setIsAddressModalOpen(true);
+                            }}
+                            className="text-xs text-[#c4622d] hover:text-[#923f12] font-semibold flex items-center gap-1 cursor-pointer"
+                          >
+                            <Edit3 className="w-3.5 h-3.5" />
+                            <span>Edit Address</span>
+                          </button>
+
+                          {addr.id !== defaultAddressId && (
+                            <button
+                              type="button"
+                              onClick={() => handleSetDefaultAddress(addr.id)}
+                              className="text-[11px] text-[#686764] hover:text-[#060505] underline cursor-pointer"
+                            >
+                              Set as Default
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             ),
           },
         ]}
+      />
+
+      {/* Modals for Profile, Email, and Address Updates */}
+      <ProfileEditModal
+        isOpen={isProfileModalOpen}
+        onClose={() => setIsProfileModalOpen(false)}
+        initialFirstName={customer?.firstName || ''}
+        initialLastName={customer?.lastName || ''}
+        initialPhone={customer?.phone || ''}
+        onSuccess={() => revalidator.revalidate()}
+      />
+
+      <EmailChangeModal
+        isOpen={isEmailModalOpen}
+        onClose={() => setIsEmailModalOpen(false)}
+        currentEmail={customerEmail}
+        onSuccess={() => revalidator.revalidate()}
+      />
+
+      <AddressFormModal
+        isOpen={isAddressModalOpen}
+        onClose={() => setIsAddressModalOpen(false)}
+        mode={addressModalMode}
+        address={selectedAddress}
+        onSuccess={() => revalidator.revalidate()}
       />
     </div>
   );

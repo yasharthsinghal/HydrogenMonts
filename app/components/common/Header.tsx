@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate, useLocation, useFetcher } from 'react-router';
 import { AnnouncementBar } from './AnnouncementBar';
 import { Navigation } from './Navigation';
-import { Search, X, ShoppingBag, User, Menu, ArrowRight, Loader2 } from 'lucide-react';
+import { Search, X, ShoppingBag, User, Menu, ArrowRight, Loader2, Sparkles } from 'lucide-react';
 import type { ProductCardItem } from '~/types/storefront.types';
 
 export interface HeaderProps {
@@ -119,9 +119,9 @@ export const Header: React.FC<HeaderProps> = ({
     <header className="sticky top-0 z-40 w-full" style={{ fontFamily: "'DM Sans', sans-serif" }}>
       <AnnouncementBar />
 
-      {/* Main Nav Bar with stable height to eliminate layout-shift flickering */}
+      {/* Main Nav Bar with reduced height & compact logo */}
       <div
-        className={`w-full py-3.5 md:py-4 transition-[background-color,box-shadow,border-color] duration-200 ease-out border-b ${
+        className={`w-full py-2 md:py-2.5 transition-[background-color,box-shadow,border-color] duration-200 ease-out border-b ${
           isScrolled
             ? 'shadow-xs bg-[#faf8f5]/95 backdrop-blur-md border-[#e8e4df]'
             : 'bg-[#faf8f5] border-[#e8e4df]'
@@ -131,20 +131,37 @@ export const Header: React.FC<HeaderProps> = ({
           {/* Left: Mobile hamburger */}
           <button
             onClick={onOpenMobileNav}
-            className="md:hidden p-2 rounded-full transition-all text-[#1a1a1a] hover:text-[#c4622d] hover:bg-[#f0edea] active:scale-90 cursor-pointer"
+            className="md:hidden p-1.5 rounded-full transition-all text-[#1a1a1a] hover:text-[#c4622d] hover:bg-[#f0edea] active:scale-90 cursor-pointer"
             aria-label="Open mobile menu"
           >
-            <Menu className="w-6 h-6" />
+            <Menu className="w-5 h-5" />
           </button>
 
-          {/* Logo */}
-          <Link
-            to="/"
-            className="text-2xl md:text-3xl font-bold tracking-widest uppercase text-[#060505] hover:opacity-85 transition-opacity"
-            style={{ fontFamily: "'Playfair Display', serif" }}
-          >
-            MONTS
-          </Link>
+          {/* Logo & Rebrand Notice */}
+          <div className="flex items-center gap-3 shrink-0">
+            <Link
+              to="/"
+              className="flex items-center shrink-0 hover:opacity-85 transition-opacity"
+              aria-label="MONTS Home"
+            >
+              <img
+                src="/monts_logo.png"
+                alt="MONTS"
+                className="h-8 md:h-9.5 w-auto object-contain"
+              />
+            </Link>
+
+            {/* Rebrand Notice Pill */}
+            <div className="hidden lg:flex items-center pl-1">
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#f0edea]/85 border border-[#e8e4df] text-[10.5px] text-[#686764] shadow-[0_1px_2px_rgba(0,0,0,0.02)] transition-colors hover:border-[#dac7b4]">
+                <Sparkles className="w-3 h-3 text-[#c4622d] shrink-0" />
+                <span className="tracking-wide whitespace-nowrap">
+                  <span className="font-semibold text-[#1a1a1a]">Vastra by Monty</span> is now{' '}
+                  <span className="font-bold text-[#c4622d] tracking-wide">MONTS</span>
+                </span>
+              </span>
+            </div>
+          </div>
 
           {/* Center: Desktop Navigation */}
           <div className="hidden md:flex flex-1 justify-center">
@@ -152,24 +169,24 @@ export const Header: React.FC<HeaderProps> = ({
           </div>
 
           {/* Right: Actions */}
-          <div className="flex items-center gap-2 sm:gap-3">
+          <div className="flex items-center gap-1.5 sm:gap-2.5">
             {/* Search Toggle Button */}
             <button
               type="button"
               onClick={handleToggleSearch}
-              className="p-2 text-[#1a1a1a] hover:text-[#c4622d] hover:bg-[#f0edea] active:scale-90 rounded-full transition-all cursor-pointer"
+              className="p-1.5 text-[#1a1a1a] hover:text-[#c4622d] hover:bg-[#f0edea] active:scale-90 rounded-full transition-all cursor-pointer"
               aria-label={searchOpen ? 'Close search' : 'Open search'}
             >
-              {searchOpen ? <X className="w-5 h-5" /> : <Search className="w-5 h-5" />}
+              {searchOpen ? <X className="w-4.5 h-4.5" /> : <Search className="w-4.5 h-4.5" />}
             </button>
 
             {/* Account */}
             <Link
               to="/account"
-              className="p-2 text-[#1a1a1a] hover:text-[#c4622d] hover:bg-[#f0edea] active:scale-90 rounded-full transition-all"
+              className="p-1.5 text-[#1a1a1a] hover:text-[#c4622d] hover:bg-[#f0edea] active:scale-90 rounded-full transition-all"
               aria-label="Customer Account"
             >
-              <User className="w-5 h-5" />
+              <User className="w-4.5 h-4.5" />
             </Link>
 
             {/* Cart Trigger */}
@@ -177,15 +194,15 @@ export const Header: React.FC<HeaderProps> = ({
               <button
                 type="button"
                 onClick={onOpenCart}
-                className="relative flex items-center gap-2 px-3.5 py-2 text-xs font-semibold rounded-[6px] bg-[#c4622d] text-white hover:bg-[#923f12] active:scale-95 transition-all cursor-pointer shadow-xs"
+                className="relative flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-[5px] bg-[#c4622d] text-white hover:bg-[#923f12] active:scale-95 transition-all cursor-pointer shadow-xs"
                 aria-label="Shopping Cart Drawer"
               >
-                <ShoppingBag className="w-4 h-4" />
+                <ShoppingBag className="w-3.5 h-3.5" />
                 <span className="hidden sm:inline">Cart</span>
                 {cartCount > 0 && (
                   <span
                     key={cartCount}
-                    className="flex items-center justify-center w-5 h-5 text-[10px] font-bold rounded-full bg-white text-[#c4622d] animate-badge-pop"
+                    className="flex items-center justify-center w-4 h-4 text-[9px] font-bold rounded-full bg-white text-[#c4622d] animate-badge-pop"
                   >
                     {cartCount}
                   </span>
@@ -194,15 +211,15 @@ export const Header: React.FC<HeaderProps> = ({
             ) : (
               <Link
                 to="/cart"
-                className="relative flex items-center gap-2 px-3.5 py-2 text-xs font-semibold rounded-[6px] bg-[#c4622d] text-white hover:bg-[#923f12] active:scale-95 transition-all cursor-pointer shadow-xs"
+                className="relative flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-[5px] bg-[#c4622d] text-white hover:bg-[#923f12] active:scale-95 transition-all cursor-pointer shadow-xs"
                 aria-label="Shopping Cart"
               >
-                <ShoppingBag className="w-4 h-4" />
+                <ShoppingBag className="w-3.5 h-3.5" />
                 <span className="hidden sm:inline">Cart</span>
                 {cartCount > 0 && (
                   <span
                     key={cartCount}
-                    className="flex items-center justify-center w-5 h-5 text-[10px] font-bold rounded-full bg-white text-[#c4622d] animate-badge-pop"
+                    className="flex items-center justify-center w-4 h-4 text-[9px] font-bold rounded-full bg-white text-[#c4622d] animate-badge-pop"
                   >
                     {cartCount}
                   </span>

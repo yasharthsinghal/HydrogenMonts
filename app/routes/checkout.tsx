@@ -36,6 +36,7 @@ import {
   Smartphone,
   CheckCircle2,
   Zap,
+  Sparkles,
 } from 'lucide-react';
 import { clsx } from 'clsx';
 import { getHydrogenContext } from '~/lib/context.server';
@@ -112,6 +113,7 @@ export async function action({ request, context }: ActionFunctionArgs) {
   const province = (formData.get('province') as string)?.trim();
   const zip = (formData.get('zip') as string)?.trim();
   const country = 'IN';
+  const subscribeNewsletter = formData.get('subscribeNewsletter') === 'true';
 
   // 1. Field validation
   if (!email || !firstName || !lastName || !phone || !address1 || !city || !province || !zip) {
@@ -127,6 +129,13 @@ export async function action({ request, context }: ActionFunctionArgs) {
       },
       { status: 400 },
     );
+  }
+
+  // 3. Process VIP Catalog & Newsletter Subscription if opted-in
+  if (subscribeNewsletter && email) {
+    shopifyCustomerService.subscribeCustomer(email, 'checkout', env).catch((subErr) => {
+      console.warn('[Checkout Subscription Notice] Background sync warning:', subErr);
+    });
   }
 
   // Retrieve existing or create new checkout session
@@ -380,6 +389,30 @@ export default function CheckoutPage() {
                       startIcon={<Phone className="w-4 h-4 text-[#686764]" />}
                     />
                   </div>
+
+                  {/* VIP Catalog & Secret Drops Subscription Checkbox */}
+                  <label
+                    htmlFor="subscribeNewsletter"
+                    className="flex items-start gap-3 p-3.5 mt-1 rounded-[6px] bg-[#faf8f5] border border-[#e8e4df] hover:border-[#c4622d]/40 transition-colors cursor-pointer group"
+                  >
+                    <input
+                      type="checkbox"
+                      id="subscribeNewsletter"
+                      name="subscribeNewsletter"
+                      defaultChecked={true}
+                      value="true"
+                      className="mt-0.5 w-4 h-4 rounded border-[#e8e4df] text-[#c4622d] focus:ring-[#c4622d] accent-[#c4622d] cursor-pointer shrink-0"
+                    />
+                    <div className="flex flex-col gap-0.5 text-xs select-none">
+                      <span className="font-semibold text-[#060505] flex items-center gap-1.5 group-hover:text-[#c4622d] transition-colors">
+                        <Sparkles className="w-3.5 h-3.5 text-[#c4622d] shrink-0" />
+                        <span>Send me private previews, secret catalogs & seasonal privilege offers</span>
+                      </span>
+                      <p className="text-[11px] text-[#686764] leading-relaxed">
+                        Be the first to access limited-batch hand-block releases, early-bird festive discounts, and digital lookbooks before public drops. Unsubscribe anytime in 1 click.
+                      </p>
+                    </div>
+                  </label>
                 </div>
 
                 {/* 2. Shipping Address */}

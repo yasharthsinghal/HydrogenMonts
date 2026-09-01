@@ -1,6 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import { Link } from 'react-router';
-import { X, ChevronRight, User, ShoppingBag } from 'lucide-react';
+import { X, ChevronRight, User, ShoppingBag, Sparkles } from 'lucide-react';
 import { NAV_ITEMS, DEFAULT_COLLECTIONS, type NavSubItem } from './Navigation';
 import { useRouteLoaderData } from 'react-router';
 import type { CollectionCardItem } from '~/types/storefront.types';
@@ -73,15 +73,25 @@ export const MobileNav: React.FC<MobileNavProps> = ({ isOpen, onClose }) => {
         <div className="overflow-y-auto">
           {/* Header */}
           <div className="flex items-center justify-between p-5 border-b border-[#e8e4df]">
-            <span
-              className="text-xl font-bold tracking-widest text-[#060505]"
-              style={{ fontFamily: "'Playfair Display', serif" }}
-            >
-              MONTS
-            </span>
+            <div className="flex flex-col gap-1.5">
+              <Link to="/" onClick={onClose} className="flex items-center">
+                <img
+                  src="/monts_logo.png"
+                  alt="MONTS"
+                  className="h-8 w-auto object-contain"
+                />
+              </Link>
+              <span className="inline-flex items-center gap-1.5 text-[10px] text-[#8b7355] font-medium tracking-wide">
+                <Sparkles className="w-3 h-3 text-[#c4622d] shrink-0" />
+                <span>
+                  <strong className="text-[#2c2c2c] font-semibold">Vastra by Monty</strong> is now{' '}
+                  <strong className="text-[#c4622d] font-bold">MONTS</strong>
+                </span>
+              </span>
+            </div>
             <button
               onClick={onClose}
-              className="p-1.5 rounded-full text-[#686764] hover:text-[#060505] hover:bg-[#f0edea] active:scale-95 transition-all cursor-pointer"
+              className="p-1.5 rounded-full text-[#686764] hover:text-[#060505] hover:bg-[#f0edea] active:scale-95 transition-all cursor-pointer self-start"
               aria-label="Close menu"
             >
               <X className="w-5 h-5" />
