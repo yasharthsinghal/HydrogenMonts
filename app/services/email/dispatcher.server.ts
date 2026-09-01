@@ -1,48 +1,44 @@
-import { ResendEmailProvider } from './resend.server';
 import { GoogleSmtpEmailProvider } from './smtp.server';
-import type { SendOtpOptions, SendOrderConfirmationOptions, SendContactInquiryOptions, EmailProviderResult } from './types';
+import type {
+  SendOtpOptions,
+  SendOrderConfirmationOptions,
+  SendContactInquiryOptions,
+  EmailProviderResult,
+} from './types';
 
-const resendProvider = new ResendEmailProvider();
 const smtpProvider = new GoogleSmtpEmailProvider();
+
+/**
+ * Check if Google SMTP is active.
+ * Default is active (enabled) unless explicitly set to "false".
+ */
+function isSmtpActive(env: Env): boolean {
+  return env.ENABLE_GOOGLE_SMTP !== 'false';
+}
 
 export async function dispatchOtpEmail(
   options: SendOtpOptions,
   env: Env,
 ): Promise<EmailProviderResult> {
-  const isGoogleSmtpEnabled =
-    env.ENABLE_GOOGLE_SMTP === 'true' ||
-    env.OTP_EMAIL_PROVIDER === 'smtp' ||
-    env.OTP_EMAIL_PROVIDER === 'google_smtp';
+  const isGoogleSmtpEnabled = isSmtpActive(env);
 
-  const isResendEnabled =
-    env.ENABLE_RESEND === 'true' || env.OTP_EMAIL_PROVIDER === 'resend';
+  console.info(`[Email Dispatcher] Target: ${options.to} | Gmail SMTP Active: ${isGoogleSmtpEnabled}`);
 
-  console.info(`[Email Dispatcher] Target: ${options.to} | SMTP Enabled: ${isGoogleSmtpEnabled} | Resend Enabled: ${isResendEnabled}`);
-
-  // 1. If Google SMTP is explicitly enabled, try SMTP first
+  // 1. If Google SMTP is enabled (default active for development), try SMTP
   if (isGoogleSmtpEnabled) {
     const smtpResult = await smtpProvider.sendOtp(options, env);
     if (smtpResult.success) {
       return smtpResult;
     }
-    console.warn(`[Email Dispatcher] SMTP attempt failed: ${smtpResult.error}. Checking fallback.`);
+    console.warn(`[Email Dispatcher] Gmail SMTP attempt notice: ${smtpResult.error}`);
   }
 
-  // 2. If Resend is enabled, try Resend
-  if (isResendEnabled || (!isGoogleSmtpEnabled && env.RESEND_API_KEY && !env.RESEND_API_KEY.includes('PASTE_YOUR'))) {
-    const resendResult = await resendProvider.sendOtp(options, env);
-    if (resendResult.success) {
-      return resendResult;
-    }
-    console.warn(`[Email Dispatcher] Resend attempt failed: ${resendResult.error}.`);
-  }
-
-  // 3. Fallback / Dev Mode Logger (so local development never breaks even if credentials aren't set)
+  // 2. Fallback / Dev Mode Logger (ensures local development works seamlessly even if SMTP credentials are being configured)
   console.info(`\n======================================================`);
   console.info(`🔐 [MONTS OTP DISPATCH — Development Mode]`);
   console.info(`📧 Target: ${options.to}`);
   console.info(`🔑 6-Digit Code: ${options.code}`);
-  console.info(`ℹ️  Configure ENABLE_GOOGLE_SMTP="true" or ENABLE_RESEND="true" in .env for live inbox delivery.`);
+  console.info(`ℹ️  Configured with Gmail SMTP. Set SMTP_USER and SMTP_PASS in .env for live inbox delivery.`);
   console.info(`======================================================\n`);
 
   return {
@@ -55,24 +51,14 @@ export async function dispatchOrderConfirmationEmail(
   options: SendOrderConfirmationOptions,
   env: Env,
 ): Promise<EmailProviderResult> {
-  const isGoogleSmtpEnabled =
-    env.ENABLE_GOOGLE_SMTP === 'true' ||
-    env.OTP_EMAIL_PROVIDER === 'smtp' ||
-    env.OTP_EMAIL_PROVIDER === 'google_smtp';
+  const isGoogleSmtpEnabled = isSmtpActive(env);
 
-  const isResendEnabled =
-    env.ENABLE_RESEND === 'true' || env.OTP_EMAIL_PROVIDER === 'resend';
-
-  console.info(`[Email Dispatcher - Order Confirmation] Order: ${options.orderName} | Target: ${options.to}`);
+  console.info(`[Email Dispatcher - Order Confirmation] Order: ${options.orderName} | Target: ${options.to} | Gmail SMTP Active: ${isGoogleSmtpEnabled}`);
 
   if (isGoogleSmtpEnabled) {
     const smtpResult = await smtpProvider.sendOrderConfirmation(options, env);
     if (smtpResult.success) return smtpResult;
-  }
-
-  if (isResendEnabled || (!isGoogleSmtpEnabled && env.RESEND_API_KEY && !env.RESEND_API_KEY.includes('PASTE_YOUR'))) {
-    const resendResult = await resendProvider.sendOrderConfirmation(options, env);
-    if (resendResult.success) return resendResult;
+    console.warn(`[Email Dispatcher - Order Confirmation] SMTP notice: ${smtpResult.error}`);
   }
 
   console.info(`\n======================================================`);
@@ -92,26 +78,14 @@ export async function dispatchContactInquiryEmail(
   options: SendContactInquiryOptions,
   env: Env,
 ): Promise<EmailProviderResult> {
-  const isGoogleSmtpEnabled =
-    env.ENABLE_GOOGLE_SMTP === 'true' ||
-    env.OTP_EMAIL_PROVIDER === 'smtp' ||
-    env.OTP_EMAIL_PROVIDER === 'google_smtp';
+  const isGoogleSmtpEnabled = isSmtpActive(env);
 
-  const isResendEnabled =
-    env.ENABLE_RESEND === 'true' || env.OTP_EMAIL_PROVIDER === 'resend';
-
-  console.info(`[Email Dispatcher - Contact Inquiry] From: ${options.fullName} (${options.email}) | To: ${options.to}`);
+  console.info(`[Email Dispatcher - Contact Inquiry] From: ${options.fullName} (${options.email}) | To: ${options.to} | Gmail SMTP Active: ${isGoogleSmtpEnabled}`);
 
   if (isGoogleSmtpEnabled) {
     const smtpResult = await smtpProvider.sendContactInquiry(options, env);
     if (smtpResult.success) return smtpResult;
-    console.warn(`[Email Dispatcher - Contact Inquiry] SMTP failed: ${smtpResult.error}. Checking fallback.`);
-  }
-
-  if (isResendEnabled || (!isGoogleSmtpEnabled && env.RESEND_API_KEY && !env.RESEND_API_KEY.includes('PASTE_YOUR'))) {
-    const resendResult = await resendProvider.sendContactInquiry(options, env);
-    if (resendResult.success) return resendResult;
-    console.warn(`[Email Dispatcher - Contact Inquiry] Resend failed: ${resendResult.error}.`);
+    console.warn(`[Email Dispatcher - Contact Inquiry] SMTP notice: ${smtpResult.error}`);
   }
 
   console.info(`\n======================================================`);
@@ -128,4 +102,3 @@ export async function dispatchContactInquiryEmail(
     provider: 'console_dev',
   };
 }
-

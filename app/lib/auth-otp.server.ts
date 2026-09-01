@@ -4,7 +4,7 @@
  * High-level orchestration module for passwordless OTP authentication:
  * 1. generateOtp()          → cryptographic 6-digit code
  * 2. hashOtp() / verifyOtpHash() → cryptographic SHA-256 HMAC challenge derivation
- * 3. sendOtpEmail()         → dispatches via Resend / Google SMTP / Dev Logger
+ * 3. sendOtpEmail()         → dispatches via Google SMTP / Dev Logger
  * 4. syncCustomerWithShopify() → creates/syncs customer in Shopify via Admin API (no password)
  */
 

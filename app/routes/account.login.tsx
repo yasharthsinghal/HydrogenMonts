@@ -120,7 +120,7 @@ export async function action({ request, context }: ActionFunctionArgs) {
     };
     session.set('otpData', otpData);
 
-    // Dispatch OTP email via active provider (Google SMTP / Resend / Dev Logger)
+    // Dispatch OTP email via active provider (Google SMTP / Dev Logger)
     const { success, error: emailError } = await sendOtpEmail(email, code, env);
 
     if (!success) {

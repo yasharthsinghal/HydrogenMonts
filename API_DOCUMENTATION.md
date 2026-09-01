@@ -29,8 +29,7 @@
    - [Admin Token Exchange (`/admin/oauth/access_token`)](#51-admin-token-exchange)
    - [Admin Customer Operations (`searchCustomer`, `adminCustomerCreate`, `getAdminCustomerWithOrders`, `getAdminCustomerProfileOnly`)](#52-admin-customer-operations)
 6. [Layer 4: Email & Notification Services](#6-layer-4-email--notification-services)
-   - [Resend Email API (`POST https://api.resend.com/emails`)](#61-resend-email-api)
-   - [Google SMTP Service (Nodemailer)](#62-google-smtp-service)
+   - [Google SMTP Service (Nodemailer)](#61-google-smtp-service)
 7. [Master API Reference Matrix](#7-master-api-reference-matrix)
 
 ---
@@ -58,9 +57,9 @@ The MONTS storefront operates on a layered API architecture designed for high ed
 ┌────────────────────────┐  ┌────────────────────┐   ┌────────────────────────┐
 │ Layer 2: Shopify       │  │ Layer 3: Shopify   │   │ Layer 4: Email Services│
 │ Storefront API         │  │ Admin API          │   │                        │
-│ • Catalog & Search     │  │ • Customer Sync    │   │ • Resend HTTP API      │
-│ • Cart & Buyer Identity│  │ • Order Profiles   │   │ • Google SMTP Relay    │
-│ • Checkout URLs        │  │ • Dynamic Auth     │   │ • Local Dev Logger     │
+│ • Catalog & Search     │  │ • Customer Sync    │   │ • Google SMTP Relay    │
+│ • Cart & Buyer Identity│  │ • Order Profiles   │   │ • Local Dev Logger     │
+│ • Checkout URLs        │  │ • Dynamic Auth     │   │                        │
 └────────────────────────┘  └────────────────────┘   └────────────────────────┘
 ```
 
@@ -1363,30 +1362,14 @@ query getAdminCustomerWithOrders($query: String!) {
 
 ## 6. Layer 4: Email & Notification Services
 
-Used for one-click passwordless verification codes dispatched via `app/services/email/dispatcher.server.ts`.
+Used for one-click passwordless verification codes, order confirmations, and customer contact inquiries dispatched via `app/services/email/dispatcher.server.ts`.
 
-### 6.1 Resend Email API
-- **Endpoint**: `POST https://api.resend.com/emails`
-- **Authorization**: `Bearer {RESEND_API_KEY}`
-- **Payload**:
-  ```json
-  {
-    "from": "MONTS <onboarding@resend.dev>",
-    "to": ["customer@example.com"],
-    "subject": "742918 is your MONTS Verification Code",
-    "html": "<!DOCTYPE html><html>...</html>"
-  }
-  ```
-- **Success Response (`200 OK`)**:
-  ```json
-  { "id": "49a3999c-0ce1-4ea6-ab68-af69fced79ad" }
-  ```
-
-### 6.2 Google SMTP Service
+### 6.1 Google SMTP Service
 - **Transport**: `nodemailer`
 - **Host**: `smtp.gmail.com:465` (SSL)
 - **Auth**: App Password (`SMTP_USER`, `SMTP_PASS`)
-- **Sender**: `MONTS <orders@monts.in>`
+- **Sender**: `MONTS <vastrabymonty@gmail.com>`
+- **Fallback**: Built-in development mode console logger for local testing.
 
 ---
 

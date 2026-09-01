@@ -7,8 +7,8 @@ export class GoogleSmtpEmailProvider implements IEmailProvider {
   async sendOtp(options: SendOtpOptions, env: Env): Promise<EmailProviderResult> {
     const host = env.SMTP_HOST || 'smtp.gmail.com';
     const port = Number(env.SMTP_PORT) || 465;
-    const user = env.SMTP_USER;
-    const pass = env.SMTP_PASS;
+    const user = env.SMTP_USER?.trim();
+    const pass = env.SMTP_PASS?.replace(/\s+/g, '');
 
     if (!user || !pass || pass.includes('xxxx')) {
       return {
@@ -54,7 +54,7 @@ export class GoogleSmtpEmailProvider implements IEmailProvider {
       return {
         success: false,
         provider: this.name,
-        error: error?.message || 'SMTP is not supported in this Edge worker runtime. Use HTTP email provider (Resend).',
+        error: error?.message || 'Failed to dispatch OTP via Google SMTP.',
       };
     }
   }
@@ -62,8 +62,8 @@ export class GoogleSmtpEmailProvider implements IEmailProvider {
   async sendOrderConfirmation(options: SendOrderConfirmationOptions, env: Env): Promise<EmailProviderResult> {
     const host = env.SMTP_HOST || 'smtp.gmail.com';
     const port = Number(env.SMTP_PORT) || 465;
-    const user = env.SMTP_USER;
-    const pass = env.SMTP_PASS;
+    const user = env.SMTP_USER?.trim();
+    const pass = env.SMTP_PASS?.replace(/\s+/g, '');
 
     if (!user || !pass || pass.includes('xxxx')) {
       return {
@@ -112,8 +112,8 @@ export class GoogleSmtpEmailProvider implements IEmailProvider {
   async sendContactInquiry(options: SendContactInquiryOptions, env: Env): Promise<EmailProviderResult> {
     const host = env.SMTP_HOST || 'smtp.gmail.com';
     const port = Number(env.SMTP_PORT) || 465;
-    const user = env.SMTP_USER;
-    const pass = env.SMTP_PASS;
+    const user = env.SMTP_USER?.trim();
+    const pass = env.SMTP_PASS?.replace(/\s+/g, '');
 
     if (!user || !pass || pass.includes('xxxx')) {
       return {

@@ -14,12 +14,12 @@ export interface SendOrderConfirmationOptions {
 
 export interface EmailProviderResult {
     success: boolean;
-    provider: "resend" | "google_smtp" | "console_dev";
+    provider: "google_smtp" | "console_dev";
     error?: string;
 }
 
 export interface IEmailProvider {
-    name: "resend" | "google_smtp" | "console_dev";
+    name: "google_smtp" | "console_dev";
     sendOtp(options: SendOtpOptions, env: Env): Promise<EmailProviderResult>;
 }
 

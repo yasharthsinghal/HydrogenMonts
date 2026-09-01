@@ -26,8 +26,11 @@ export const links = () => [
   { rel: 'preconnect', href: 'https://fonts.gstatic.com', crossOrigin: 'anonymous' },
 ];
 
+import { COLLECTIONS_QUERY } from '~/graphql/StorefrontQueries';
+import type { CollectionCardItem } from '~/types/storefront.types';
+
 export async function loader({ context, request }: LoaderFunctionArgs) {
-  const { cart, session, env } = await getHydrogenContext(context, request);
+  const { cart, session, env, storefront } = await getHydrogenContext(context, request);
   let cartData = null;
   try {
     cartData = await cart.get();
@@ -37,10 +40,22 @@ export async function loader({ context, request }: LoaderFunctionArgs) {
 
   const customerAccessToken = session.get('customerAccessToken');
 
+  let collections: CollectionCardItem[] = [];
+  try {
+    const collectionsData = await storefront.query(COLLECTIONS_QUERY, {
+      variables: { first: 30 },
+      cache: storefront.CacheShort(),
+    });
+    collections = (collectionsData.collections?.nodes || []) as CollectionCardItem[];
+  } catch (error) {
+    console.error('Root loader collections query notice:', error);
+  }
+
   return {
     cart: cartData,
     isLoggedIn: Boolean(customerAccessToken),
     publicStoreDomain: env.PUBLIC_STORE_DOMAIN || '',
+    collections,
   };
 }
 

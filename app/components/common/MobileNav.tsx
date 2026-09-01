@@ -1,7 +1,9 @@
 import React, { useEffect } from 'react';
 import { Link } from 'react-router';
 import { X, ChevronRight, User, ShoppingBag } from 'lucide-react';
-import { NAV_ITEMS } from './Navigation';
+import { NAV_ITEMS, DEFAULT_COLLECTIONS, type NavSubItem } from './Navigation';
+import { useRouteLoaderData } from 'react-router';
+import type { CollectionCardItem } from '~/types/storefront.types';
 
 export interface MobileNavProps {
   isOpen: boolean;
@@ -9,6 +11,20 @@ export interface MobileNavProps {
 }
 
 export const MobileNav: React.FC<MobileNavProps> = ({ isOpen, onClose }) => {
+  const rootData = useRouteLoaderData<{ collections?: CollectionCardItem[] }>('root');
+  const [collectionsExpanded, setCollectionsExpanded] = React.useState(false);
+
+  const collectionsList: NavSubItem[] = React.useMemo(() => {
+    if (rootData?.collections && rootData.collections.length > 0) {
+      return rootData.collections.map((col) => ({
+        label: col.title,
+        href: `/collections/${col.handle}`,
+        description: col.description?.replace(/<[^>]*>?/gm, '').trim() || undefined,
+      }));
+    }
+    return DEFAULT_COLLECTIONS;
+  }, [rootData?.collections]);
+
   useEffect(() => {
     if (isOpen) {
       document.body.style.overflow = 'hidden';
@@ -32,7 +48,7 @@ export const MobileNav: React.FC<MobileNavProps> = ({ isOpen, onClose }) => {
 
       {/* Drawer */}
       <div className="relative w-full max-w-xs bg-[#faf8f5] h-full shadow-2xl z-10 flex flex-col justify-between border-r border-[#e8e4df]">
-        <div>
+        <div className="overflow-y-auto">
           {/* Header */}
           <div className="flex items-center justify-between p-5 border-b border-[#e8e4df]">
             <span
@@ -53,6 +69,52 @@ export const MobileNav: React.FC<MobileNavProps> = ({ isOpen, onClose }) => {
           {/* Nav Links */}
           <nav className="p-5 flex flex-col divide-y divide-[#e8e4df]">
             {NAV_ITEMS.map((item) => {
+              if (item.label === 'Collections') {
+                return (
+                  <div key={item.label} className="py-2 flex flex-col">
+                    <div className="flex items-center justify-between py-2 text-sm font-semibold uppercase tracking-wider text-[#1a1a1a]">
+                      <Link to={item.href} onClick={onClose} className="hover:text-[#c4622d] transition-colors">
+                        {item.label}
+                      </Link>
+                      <button
+                        type="button"
+                        onClick={() => setCollectionsExpanded((prev) => !prev)}
+                        className="p-1 text-[#8b7355] hover:text-[#c4622d] cursor-pointer text-xs flex items-center gap-1"
+                        aria-label="Toggle collections"
+                      >
+                        <ChevronRight
+                          className={`w-4 h-4 transition-transform duration-200 ${
+                            collectionsExpanded ? 'rotate-90 text-[#c4622d]' : ''
+                          }`}
+                        />
+                      </button>
+                    </div>
+
+                    {collectionsExpanded && (
+                      <div className="pl-3 pb-2 flex flex-col gap-1.5 border-l-2 border-[#e8e4df] ml-1 mt-1">
+                        <Link
+                          to="/collections"
+                          onClick={onClose}
+                          className="py-1 text-xs font-semibold text-[#c4622d] hover:underline"
+                        >
+                          View All Collections →
+                        </Link>
+                        {collectionsList.map((col) => (
+                          <Link
+                            key={col.href}
+                            to={col.href}
+                            onClick={onClose}
+                            className="py-1 text-xs text-[#686764] hover:text-[#c4622d] transition-colors"
+                          >
+                            {col.label}
+                          </Link>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                );
+              }
+
               const hasChildren = Boolean(item.children && item.children.length > 0);
 
               if (hasChildren) {
