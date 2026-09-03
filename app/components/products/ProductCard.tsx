@@ -73,27 +73,38 @@ export const ProductCard: React.FC<ProductCardProps> = ({
       {/* 1:1 Square Image Container */}
       <div className="relative w-full overflow-hidden bg-[#f5f0e8]" style={{ aspectRatio: '1/1' }}>
         <Link to={`/products/${product.handle}`} className="relative block w-full h-full overflow-hidden">
-          {/* Featured Primary Image */}
-          <img
-            src={featuredImage}
-            alt={product.featuredImage?.altText || product.title}
-            loading="lazy"
-            className="absolute inset-0 w-full h-full object-cover object-center transition-all duration-700 ease-out group-hover:scale-105"
-            style={{
-              opacity: isHovered && secondaryImage && secondaryImage !== featuredImage ? 0 : 1,
-            }}
-          />
-          {/* Secondary Lookbook Image (Cross-faded on hover) */}
-          {secondaryImage && secondaryImage !== featuredImage && (
-            <img
-              src={secondaryImage}
-              alt={`${product.title} alternate view`}
-              loading="lazy"
-              className="absolute inset-0 w-full h-full object-cover object-center transition-all duration-700 ease-out group-hover:scale-105"
-              style={{
-                opacity: isHovered ? 1 : 0,
-              }}
-            />
+          {featuredImage ? (
+            <>
+              {/* Featured Primary Image */}
+              <img
+                src={featuredImage}
+                alt={product.featuredImage?.altText || product.title}
+                loading="lazy"
+                className="absolute inset-0 w-full h-full object-cover object-center transition-all duration-700 ease-out group-hover:scale-105"
+                style={{
+                  opacity: isHovered && secondaryImage && secondaryImage !== featuredImage ? 0 : 1,
+                }}
+              />
+              {/* Secondary Lookbook Image (Cross-faded on hover) */}
+              {secondaryImage && secondaryImage !== featuredImage && (
+                <img
+                  src={secondaryImage}
+                  alt={`${product.title} alternate view`}
+                  loading="lazy"
+                  className="absolute inset-0 w-full h-full object-cover object-center transition-all duration-700 ease-out group-hover:scale-105"
+                  style={{
+                    opacity: isHovered ? 1 : 0,
+                  }}
+                />
+              )}
+            </>
+          ) : (
+            <div className="absolute inset-0 flex flex-col items-center justify-center bg-[#f0edea] text-[#8b7355] p-4 text-center">
+              <ShoppingBag className="w-10 h-10 mb-2 opacity-40" />
+              <span className="text-[11px] font-medium tracking-wide uppercase text-[#686764]/70" style={{ fontFamily: "'DM Sans', sans-serif" }}>
+                Artisanal Piece
+              </span>
+            </div>
           )}
         </Link>
 
