@@ -12,7 +12,8 @@
         "typecheck": "tsc",
         "test:apis": "node scripts/test-apis.mjs",
         "test:location": "npx tsx scripts/test-location-service.mjs",
-        "sync:collections": "node scripts/sync-shopify-collections.mjs"
+        "sync:collections": "node scripts/sync-shopify-collections.mjs",
+        "sync:collections:dry": "node scripts/sync-shopify-collections.mjs --dry-run"
     },
     "dependencies": {
         "@shopify/cli": "^3.70.0",

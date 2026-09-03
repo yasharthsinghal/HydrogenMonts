@@ -239,6 +239,67 @@ function parseCSV(text) {
   return { headers, records };
 }
 
+function parseAssetsCSV(text) {
+  const { headers, records } = parseCSV(text);
+  const collectionsRecords = [];
+  const mappingsRecords = [];
+  const seenHandles = new Set();
+
+  for (const row of records) {
+    const isParent = (row['Collection Level'] || '').toLowerCase() === 'parent';
+    const handle = (isParent ? row['Category Handle'] : row['Collection Handle'] || row['Category Handle'])?.trim();
+    const title = (isParent ? row['Category'] : row['Collection'] || row['Category'])?.trim();
+    const description = (row['Description'] || `${title} collection`)?.trim();
+    const descriptionHtml = `<p>${description}</p>`;
+    const sortOrder = 'BEST_SELLING';
+    const isPublished = 'TRUE';
+
+    if (!handle || !title) continue;
+
+    const productHandlesRaw = row['Product Handles'] || '';
+    const productHandles = productHandlesRaw
+      .split('|')
+      .map((h) => h.trim())
+      .filter((h) => h.length > 0);
+
+    if (!seenHandles.has(handle)) {
+      seenHandles.add(handle);
+      collectionsRecords.push({
+        'Collection Title': title,
+        'Handle': handle,
+        'Description HTML': descriptionHtml,
+        'Published': isPublished,
+        'Sort Order': sortOrder,
+        'Product Count': String(productHandles.length),
+        'Category': row['Category'] || '',
+        'Collection Level': row['Collection Level'] || '',
+        'Parent Category': row['Parent Category'] || '',
+      });
+    }
+
+    for (const prodHandle of productHandles) {
+      mappingsRecords.push({
+        'Collection Title': title,
+        'Collection Handle': handle,
+        'Published': isPublished,
+        'Product Handle': prodHandle,
+        'Product Title': prodHandle,
+      });
+    }
+  }
+
+  return {
+    collectionsData: {
+      headers: ['Collection Title', 'Handle', 'Description HTML', 'Published', 'Sort Order', 'Product Count'],
+      records: collectionsRecords,
+    },
+    mappingsData: {
+      headers: ['Collection Title', 'Collection Handle', 'Published', 'Product Handle', 'Product Title'],
+      records: mappingsRecords,
+    },
+  };
+}
+
 // ============================================================================
 // 3. VALIDATION PHASE
 // ============================================================================
@@ -448,20 +509,81 @@ async function runSync() {
   // --------------------------------------------------------------------------
   // Step 1: File Existence and CSV Parsing
   // --------------------------------------------------------------------------
-  if (!fs.existsSync(COLLECTIONS_CSV_PATH)) {
-    console.error(`❌ [VALIDATION] Missing file: ${COLLECTIONS_CSV_PATH}`);
+  let collectionsData;
+  let mappingsData;
+
+  // New clean 2-file schema (preferred)
+  const ASSETS_COLLECTIONS = path.resolve(projectRoot, 'assets', 'monts_collections.csv');
+  const ASSETS_PRODUCTS    = path.resolve(projectRoot, 'assets', 'monts_products.csv');
+
+  // Legacy fallback (old single combined file)
+  const ASSETS_COMBINED_LEGACY = path.resolve(projectRoot, 'assets', 'monts_collections_3_sep_2026.csv');
+
+  // CLI override for collections file
+  const customArgPath = process.argv.slice(2).find((arg) => !arg.startsWith('--'));
+
+  if (fs.existsSync(ASSETS_COLLECTIONS) && fs.existsSync(ASSETS_PRODUCTS)) {
+    // ── Preferred: new 2-file schema ──────────────────────────────────────────
+    console.log(`[SOURCE] Reading collections: ${ASSETS_COLLECTIONS}`);
+    console.log(`[SOURCE] Reading products:    ${ASSETS_PRODUCTS}`);
+
+    const rawCollections = fs.readFileSync(ASSETS_COLLECTIONS, 'utf8');
+    const rawProducts    = fs.readFileSync(ASSETS_PRODUCTS, 'utf8');
+
+    const colParsed = parseCSV(rawCollections);
+    collectionsData = {
+      headers: ['Collection Title', 'Handle', 'Description HTML', 'Published', 'Sort Order'],
+      records: colParsed.records.map((r) => ({
+        'Collection Title': r['Collection Title'],
+        'Handle':           r['Handle'],
+        'Description HTML': r['Description HTML'],
+        'Published':        r['Published'],
+        'Sort Order':       r['Sort Order'] || 'BEST_SELLING',
+      })),
+    };
+
+    // Skip FUTURE rows — those products don't exist in Shopify yet
+    const prodParsed = parseCSV(rawProducts);
+    mappingsData = {
+      headers: ['Collection Title', 'Collection Handle', 'Published', 'Product Handle', 'Product Title'],
+      records: prodParsed.records
+        .filter((r) => {
+          const handle = (r['Product Handle'] || '').trim();
+          const notes  = (r['Notes'] || '').trim();
+          return handle.length > 0 && !notes.toUpperCase().startsWith('FUTURE');
+        })
+        .map((r) => ({
+          'Collection Title':  r['Product Title'] || r['Product Handle'],
+          'Collection Handle': r['Collection Handle'],
+          'Published':         'TRUE',
+          'Product Handle':    r['Product Handle'],
+          'Product Title':     r['Product Title'] || r['Product Handle'],
+        })),
+    };
+
+  } else if (fs.existsSync(ASSETS_COMBINED_LEGACY) || customArgPath) {
+    // ── Legacy fallback: old combined assets file ─────────────────────────────
+    const legacyPath = customArgPath
+      ? path.resolve(process.cwd(), customArgPath)
+      : ASSETS_COMBINED_LEGACY;
+    console.log(`[SOURCE] (Legacy) Reading combined dataset: ${legacyPath}`);
+    const assetsRaw = fs.readFileSync(legacyPath, 'utf8');
+    const parsed = parseAssetsCSV(assetsRaw);
+    collectionsData = parsed.collectionsData;
+    mappingsData    = parsed.mappingsData;
+
+  } else if (fs.existsSync(COLLECTIONS_CSV_PATH) && fs.existsSync(MAPPINGS_CSV_PATH)) {
+    // ── Root-level CSV fallback ───────────────────────────────────────────────
+    console.log(`[SOURCE] Reading root collections and mappings CSVs`);
+    collectionsData = parseCSV(fs.readFileSync(COLLECTIONS_CSV_PATH, 'utf8'));
+    mappingsData    = parseCSV(fs.readFileSync(MAPPINGS_CSV_PATH,    'utf8'));
+
+  } else {
+    console.error(`❌ [SOURCE] Could not find CSV files. Expected:`);
+    console.error(`   assets/monts_collections.csv  (collection definitions)`);
+    console.error(`   assets/monts_products.csv     (product → collection mapping)`);
     process.exit(1);
   }
-  if (!fs.existsSync(MAPPINGS_CSV_PATH)) {
-    console.error(`❌ [VALIDATION] Missing file: ${MAPPINGS_CSV_PATH}`);
-    process.exit(1);
-  }
-
-  const collectionsRaw = fs.readFileSync(COLLECTIONS_CSV_PATH, 'utf8');
-  const mappingsRaw = fs.readFileSync(MAPPINGS_CSV_PATH, 'utf8');
-
-  const collectionsData = parseCSV(collectionsRaw);
-  const mappingsData = parseCSV(mappingsRaw);
 
   console.log(`[VALIDATION] Loaded ${collectionsData.records.length} collections from CSV.`);
   console.log(`[VALIDATION] Loaded ${mappingsData.records.length} product-collection mappings from CSV.`);
