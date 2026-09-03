@@ -13,7 +13,9 @@
         "test:apis": "node scripts/test-apis.mjs",
         "test:location": "npx tsx scripts/test-location-service.mjs",
         "sync:collections": "node scripts/sync-shopify-collections.mjs",
-        "sync:collections:dry": "node scripts/sync-shopify-collections.mjs --dry-run"
+        "sync:collections:dry": "node scripts/sync-shopify-collections.mjs --dry-run",
+        "sync:products": "node scripts/post-products-to-shopify.mjs",
+        "sync:products:dry": "node scripts/post-products-to-shopify.mjs --dry-run"
     },
     "dependencies": {
         "@shopify/cli": "^3.70.0",
