@@ -37,7 +37,6 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
 }) => {
   const fetcher = useFetcher();
   const isMutating = fetcher.state !== 'idle';
-  const [isRedirecting, setIsRedirecting] = useState(false);
   const drawerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -115,11 +114,6 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
 
   const handleRemoveLine = (lineId: string) => {
     handleUpdateQuantity(lineId, 0);
-  };
-
-  const handleCheckout = () => {
-    if (!cart?.checkoutUrl || isRedirecting) return;
-    setIsRedirecting(true);
   };
 
   return (
@@ -234,38 +228,21 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
             <p className="text-[11px] text-[#686764]">
               Shipping and taxes calculated at checkout.
             </p>
-            {cart?.checkoutUrl ? (
-              <a
-                href={cart.checkoutUrl}
-                onClick={handleCheckout}
-                className="w-full"
+            <Link
+              to="/checkout"
+              onClick={onClose}
+              className="w-full"
+            >
+              <Button
+                variant="primary"
+                size="lg"
+                disabled={isMutating}
+                className="w-full flex items-center justify-center gap-2 cursor-pointer"
               >
-                <Button
-                  variant="primary"
-                  size="lg"
-                  disabled={isRedirecting || isMutating}
-                  className="w-full flex items-center justify-center gap-2"
-                >
-                  {isRedirecting ? (
-                    <>
-                      <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                      <span>Redirecting to Checkout...</span>
-                    </>
-                  ) : (
-                    <>
-                      <span>Proceed to Checkout</span>
-                      <ArrowRight className="w-4 h-4" />
-                    </>
-                  )}
-                </Button>
-              </a>
-            ) : (
-              <Link to="/cart" onClick={onClose}>
-                <Button variant="primary" size="lg" className="w-full">
-                  View Full Cart
-                </Button>
-              </Link>
-            )}
+                <span>Proceed to Checkout</span>
+                <ArrowRight className="w-4 h-4" />
+              </Button>
+            </Link>
           </div>
         )}
       </div>
