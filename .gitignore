@@ -28,3 +28,8 @@ pnpm-debug.log*
 # System files
 .DS_Store
 Thumbs.db
+
+# Admin Operations & Raw Data Assets (isolated to private monts-admin suite)
+scripts/
+assets/
+*.csv
