@@ -1,130 +1,120 @@
-# 📚 MONTS Shopify Hydrogen Storefront — API Reference & Specifications
+# MONTS Storefront API Documentation
 
-> **System**: MONTS Luxury Artisanal Storefront  
-> **Framework**: Shopify Hydrogen (React Router v7 / Remix on Oxygen / Node 22)  
-> **Shopify Storefront API Version**: `2025-01`  
-> **Shopify Admin API Version**: `2025-01`  
-> **Document Status**: Production-Ready  
+This document describes the current Hydrogen storefront API and service architecture.
 
----
+Last synchronized on 2026-09-03.
 
-## 📑 Table of Contents
+## System Overview
 
-1. [Architectural Overview & API Topology](#1-architectural-overview--api-topology)
-2. [Authentication, Sessions & Security](#2-authentication-sessions--security)
-3. [Layer 1: Storefront Application HTTP APIs (Route Loaders & Actions)](#3-layer-1-storefront-application-http-apis-route-loaders--actions)
-   - [Cart Lifecycle APIs (`POST /cart`, `GET /cart`)](#31-cart-lifecycle-apis)
-   - [Checkout Handoff APIs (`POST /checkout`, `GET /checkout`)](#32-checkout-handoff-apis)
-   - [Passwordless OTP Authentication (`POST /account/login`, `GET /account/login`)](#33-passwordless-otp-authentication)
-   - [Customer Account APIs (`GET /account`, `GET /account/orders/:id`)](#34-customer-account-apis)
-   - [Customer Session & OAuth (`GET /account/authorize`, `POST|GET /account/logout`)](#35-customer-session--oauth-apis)
-   - [Catalog & Product Route APIs (`/`, `/collections`, `/collections/:handle`, `/products/:handle`, `/search`)](#36-catalog--product-route-apis)
-   - [Content & Policy APIs (`/pages/:handle`, `/policies/:handle`, `/order/success`, `/thank-you`)](#37-content--policy-apis)
-   - [SEO & Crawling APIs (`/sitemap.xml`, `/robots.txt`)](#38-seo--crawling-apis)
-4. [Layer 2: Shopify Storefront GraphQL Operations](#4-layer-2-shopify-storefront-graphql-operations)
-   - [Catalog Queries (`Homepage`, `Collections`, `AllProducts`, `CollectionByHandle`, `ProductByHandle`, `RecommendedProducts`, `SearchProducts`)](#41-catalog-queries)
-   - [Cart Mutations (`cartCreate`, `cartLinesAdd`, `cartLinesUpdate`, `cartLinesRemove`, `cartBuyerIdentityUpdate`)](#42-cart-mutations)
-   - [Customer Account Storefront Operations](#43-customer-account-storefront-operations)
-5. [Layer 3: Shopify Admin GraphQL Operations (Server Services)](#5-layer-3-shopify-admin-graphql-operations-server-services)
-   - [Admin Token Exchange (`/admin/oauth/access_token`)](#51-admin-token-exchange)
-   - [Admin Customer Operations (`searchCustomer`, `adminCustomerCreate`, `getAdminCustomerWithOrders`, `getAdminCustomerProfileOnly`)](#52-admin-customer-operations)
-6. [Layer 4: Email & Notification Services](#6-layer-4-email--notification-services)
-   - [Google SMTP Service (Nodemailer)](#61-google-smtp-service)
-7. [Master API Reference Matrix](#7-master-api-reference-matrix)
+MONTS is a Shopify Hydrogen storefront using React Router v7 SSR. Public catalog reads use the Shopify Storefront GraphQL API. Server-side business operations use Shopify Admin GraphQL through private runtime credentials.
 
----
+Current verified live state:
 
-## 1. Architectural Overview & API Topology
+- Storefront-visible products: 115.
+- Storefront-visible collections: 10.
+- Storefront collections with cover images: 10.
+- Admin product count: 115.
+- Admin collection count: 10.
+- TypeScript check: `npm run typecheck` passes.
 
-The MONTS storefront operates on a layered API architecture designed for high edge performance, sub-second caching, and complete type safety:
+## Runtime Layers
 
-```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                          Client (Browser / PWA)                             │
-└──────────────────────────────────────┬──────────────────────────────────────┘
-                                       │ HTTP Requests (GET / POST)
-                                       ▼
-┌─────────────────────────────────────────────────────────────────────────────┐
-│              Layer 1: Storefront Application Server (Remix / Oxygen)        │
-│    • Route Loaders (SSR Data Fetching)                                      │
-│    • Route Actions (Form Mutations, Cart Ops, OTP Engine)                   │
-│    • In-Memory Cookie Session Store (__session)                             │
-└──────────────┬───────────────────────┬─────────────────────────┬────────────┘
-               │                       │                         │
-      Storefront GraphQL       Admin API GraphQL        External HTTP / SMTP
-               │                       │                         │
-               ▼                       ▼                         ▼
-┌────────────────────────┐  ┌────────────────────┐   ┌────────────────────────┐
-│ Layer 2: Shopify       │  │ Layer 3: Shopify   │   │ Layer 4: Email Services│
-│ Storefront API         │  │ Admin API          │   │                        │
-│ • Catalog & Search     │  │ • Customer Sync    │   │ • Google SMTP Relay    │
-│ • Cart & Buyer Identity│  │ • Order Profiles   │   │ • Local Dev Logger     │
-│ • Checkout URLs        │  │ • Dynamic Auth     │   │                        │
-└────────────────────────┘  └────────────────────┘   └────────────────────────┘
+| Layer | Role | Important Files |
+|---|---|---|
+| React Router routes | SSR loaders and form actions | `app/routes/*.tsx`, `app/routes/*.ts` |
+| Hydrogen context | Storefront, Customer Account, cart, session, env | `app/lib/context.server.ts`, `server.ts` |
+| Storefront GraphQL | Products, collections, pages, policies, search, cart checkout URL | `app/graphql/StorefrontQueries.ts`, `app/graphql/StorefrontFragments.ts` |
+| Shopify Admin GraphQL | COD orders, customer sync, profile, address, newsletter, order reads | `app/services/shopify/*.ts` |
+| Checkout services | Checkout session and validation primitives | `app/services/checkout/*.ts` |
+| Email services | OTP, COD order confirmation, contact inquiry | `app/services/email/*.ts` |
+| Location services | India pincode lookup and consistency validation | `app/services/location/*.ts` |
+
+## Session Model
+
+The storefront uses a signed HTTP-only cookie named `__session`.
+
+Important session keys:
+
+| Key | Purpose |
+|---|---|
+| `cartId` | Shopify Cart GID managed by Hydrogen cart handler |
+| `customerEmail` | Verified OTP customer identity |
+| `customerAccessToken` | Legacy/optional Shopify customer token |
+| `otpData` | Temporary OTP challenge data |
+| `emailChangeData` | Temporary OTP challenge for account email changes |
+| `__monts_checkout_session` | Checkout session metadata for COD flow |
+
+OTP challenge data contains:
+
+```ts
+interface OtpSessionData {
+  email: string;
+  codeHash: string;
+  expiresAt: number;
+  sentAt: number;
+  attempts: number;
+  used?: boolean;
+}
 ```
 
----
+Codes expire after 10 minutes, have a 60-second resend cooldown, and allow 5 attempts.
 
-## 2. Authentication, Sessions & Security
+## Public Route Matrix
 
-### 2.1 Session Storage: `__session`
-- **Cookie Name**: `__session`
-- **Security Flags**: `HttpOnly`, `SameSite=Lax`, `Path=/`, `Secure` (in production).
-- **Session Keys**:
-  - `cartId`: Authoritative Shopify Cart GID (`gid://shopify/Cart/...`).
-  - `customerEmail`: Verified email address of the authenticated customer.
-  - `customerAccessToken`: Shopify Storefront Customer Access Token (optional / legacy).
-  - `otpData`: Transient cryptographic state for passwordless login challenge:
-    ```typescript
-    interface OtpSessionData {
-      email: string;
-      codeHash: string;      // SHA-256(code:email:SESSION_SECRET)
-      expiresAt: number;     // 10 minutes from dispatch
-      sentAt: number;        // Epoch ms (for 60s cooldown)
-      attempts: number;      // Max 5 attempts allowed
-      used?: boolean;        // Replay attack prevention
-    }
-    ```
+| Route | Method | Purpose | Primary Backend |
+|---|---|---|---|
+| `/` | GET | Homepage catalog sections | Storefront API |
+| `/collections` | GET | All parent collections | Storefront API |
+| `/collections/:handle` | GET | Collection product grid and sorting | Storefront API |
+| `/collections/all` | GET | Virtual all-products collection | Storefront API |
+| `/products/:handle` | GET | Product details, variants, media, recommendations | Storefront API |
+| `/search?q=` | GET | Search results page | Storefront API |
+| `/cart` | GET | Full cart page | Hydrogen cart |
+| `/cart` | POST | Add/update/remove cart lines | Hydrogen cart |
+| `/checkout` | GET | Delivery and payment selector | Hydrogen cart, Storefront/Admin customer reads |
+| `/checkout` | POST | Prepaid or COD checkout action | Hydrogen cart, Admin API, SMTP |
+| `/thank-you` | GET | Branded post-order confirmation | Session/query params |
+| `/account/login` | GET/POST | Passwordless OTP login/register | Session, SMTP, Admin API |
+| `/account/logout` | GET/POST | Clears account session | Session, optional Storefront token revoke |
+| `/account` | GET | Customer dashboard | Admin API |
+| `/account/orders/:id` | GET | Customer order detail | Storefront token or Admin API |
+| `/contact` | GET/POST | Contact form | SMTP |
+| `/wholesale` | GET | Coming Soon page | Static route |
+| `/pages/:handle` | GET | Shopify page content | Storefront API |
+| `/policies/:handle` | GET | Shopify policy content | Storefront API |
+| `/sitemap.xml` | GET | Dynamic XML sitemap | Storefront API |
+| `/robots.txt` | GET | Crawler rules | Static route |
 
-### 2.2 Security Controls
-- **Timing-Safe OTP Validation**: SHA-256 HMAC derivation with non-enumerable session hashes.
-- **Brute-Force Rate Limiting**: Maximum 5 attempts per challenge, enforced 60-second cooldown between resend requests.
-- **IDOR Protection**: Customer order routes (`/account/orders/:id`, `/order/success`) strictly enforce ownership verification against the authenticated profile.
-- **Open Redirect Protection**: `sanitizeRedirect()` validates all `return_to` URLs to ensure navigation stays within the storefront domain.
+## Internal API Routes
 
----
+| Endpoint | Method | Purpose |
+|---|---|---|
+| `/api/location?pincode=400001` | GET | Resolve Indian pincode to city/state |
+| `/api/search?q=tote` | GET | Header autocomplete product suggestions |
+| `/api/subscribe` | POST | Subscribe customer to newsletter/VIP catalog in Shopify |
+| `/api/account/profile` | POST | Update first name, last name, phone |
+| `/api/account/address` | POST | Add, edit, delete, or set default customer address |
+| `/api/account/email-change` | POST | Send and verify OTP for email change |
 
-## 3. Layer 1: Storefront Application HTTP APIs (Route Loaders & Actions)
+## Cart API
 
-### 3.1 Cart Lifecycle APIs
+### `GET /cart`
 
-#### `POST /cart` — Cart Item Mutation Action
-Handles all asynchronous mutations on the customer's cart (add items, update quantities, remove line items).
+Loads the current Hydrogen cart using the cart ID stored in the session cookie.
 
-- **Method**: `POST`
-- **URL**: `/cart`
-- **Content-Type**: `application/x-www-form-urlencoded` or `multipart/form-data`
-- **Headers**:
-  ```http
-  Cookie: __session=...
-  Content-Type: application/x-www-form-urlencoded
-  ```
+### `POST /cart`
 
-##### Request Body Parameters
-| Parameter | Type | Required | Description |
-| :--- | :--- | :--- | :--- |
-| `cartFormInput` | `string` (JSON) | Yes | Serialized JSON object detailing the action and its inputs. |
+Accepts `cartFormInput`, a JSON string with an action and inputs.
 
-##### `cartFormInput` Schemas
+Supported actions:
 
-**1. LinesAdd (Add Item to Cart)**
 ```json
 {
   "action": "LinesAdd",
   "inputs": {
     "lines": [
       {
-        "merchandiseId": "gid://shopify/ProductVariant/47260580970725",
+        "merchandiseId": "gid://shopify/ProductVariant/...",
         "quantity": 1
       }
     ]
@@ -132,1271 +122,289 @@ Handles all asynchronous mutations on the customer's cart (add items, update qua
 }
 ```
 
-**2. LinesUpdate (Modify Line Item Quantity)**
 ```json
 {
   "action": "LinesUpdate",
   "inputs": {
     "lines": [
       {
-        "id": "gid://shopify/CartLine/6618d3e9-74d1-4171-8bc6-559d81dce2ec?cart=hWNG5jR9HVx",
-        "quantity": 3
+        "id": "gid://shopify/CartLine/...",
+        "quantity": 2
       }
     ]
   }
 }
 ```
 
-**3. LinesRemove (Remove Item from Cart)**
 ```json
 {
   "action": "LinesRemove",
   "inputs": {
-    "lineIds": [
-      "gid://shopify/CartLine/6618d3e9-74d1-4171-8bc6-559d81dce2ec?cart=hWNG5jR9HVx"
-    ]
+    "lineIds": ["gid://shopify/CartLine/..."]
   }
 }
 ```
 
-##### Success Response (`200 OK`)
-```json
-{
-  "cart": {
-    "id": "gid://shopify/Cart/hWNG5jR9HVx89P0v2Q1s7Y",
-    "checkoutUrl": "https://47751d.myshopify.com/checkouts/c/hWNG5jR9HVx89P0v2Q1s7Y",
-    "totalQuantity": 3,
-    "cost": {
-      "totalAmount": { "amount": "360.0", "currencyCode": "INR" },
-      "subtotalAmount": { "amount": "360.0", "currencyCode": "INR" },
-      "totalTaxAmount": null,
-      "totalDutyAmount": null
-    },
-    "lines": {
-      "nodes": [
-        {
-          "id": "gid://shopify/CartLine/6618d3e9-74d1-4171-8bc6-559d81dce2ec?cart=hWNG5jR9HVx",
-          "quantity": 3,
-          "cost": {
-            "totalAmount": { "amount": "360.0", "currencyCode": "INR" }
-          },
-          "merchandise": {
-            "id": "gid://shopify/ProductVariant/47260580970725",
-            "title": "Default Title",
-            "price": { "amount": "120.0", "currencyCode": "INR" },
-            "product": {
-              "title": "Small Blue Floral Tote And Pouch Combo",
-              "handle": "small-blue-floral-tote-and-pouch-combo"
-            }
-          }
-        }
-      ]
-    }
-  },
-  "userErrors": []
-}
-```
-**Response Headers**:
-```http
-Set-Cookie: __session=...; Path=/; HttpOnly; SameSite=Lax
-```
+On success, the route returns Hydrogen cart mutation output and updates the cart ID cookie through `cart.setCartId()`.
 
-##### Error Responses
-- **`400 Bad Request`**: Missing payload or invalid action.
-  ```json
-  { "error": "Invalid cart input" }
-  ```
-  ```json
-  { "error": "Unknown cart action" }
-  ```
-- **`500 Internal Server Error`**:
-  ```json
-  { "error": "Cart operation failed" }
-  ```
+## Checkout API
 
----
+### `GET /checkout`
 
-#### `GET /cart` — Cart Loader
-Fetches the current customer's cart state from the session.
+Loads:
 
-- **Method**: `GET`
-- **URL**: `/cart`
-- **Headers**: `Cookie: __session=...`
+- Current cart.
+- OTP-authenticated customer profile by `customerEmail`, if present.
+- Shopify Customer Account profile if that legacy login path is active.
 
-##### Success Response (`200 OK`)
-```json
-{
-  "cart": {
-    "id": "gid://shopify/Cart/hWNG5jR9HVx89P0v2Q1s7Y",
-    "checkoutUrl": "https://47751d.myshopify.com/checkouts/c/hWNG5jR9HVx89P0v2Q1s7Y",
-    "totalQuantity": 2,
-    "cost": {
-      "subtotalAmount": { "amount": "240.0", "currencyCode": "INR" },
-      "totalAmount": { "amount": "240.0", "currencyCode": "INR" }
-    },
-    "lines": {
-      "nodes": [
-        {
-          "id": "gid://shopify/CartLine/...",
-          "quantity": 2,
-          "merchandise": {
-            "id": "gid://shopify/ProductVariant/47260580970725",
-            "title": "Default Title",
-            "price": { "amount": "120.0", "currencyCode": "INR" }
-          }
-        }
-      ]
-    }
-  }
-}
-```
+Redirects to `/cart` when the cart is empty.
 
----
+### `POST /checkout`
 
-### 3.2 Checkout Handoff APIs
+Required form fields:
 
-#### `POST /checkout` — Delivery Address & Checkout Action
-Validates the delivery address, updates the Shopify Cart Buyer Identity, and redirects to the Shopify Hosted Checkout (CCAvenue gateway integration).
+| Field | Required | Notes |
+|---|---:|---|
+| `paymentMethod` | Yes | `PREPAID` or `COD`; defaults to `PREPAID` |
+| `email` | Yes | Used for checkout/order confirmation |
+| `firstName` | Yes | Shipping address |
+| `lastName` | Yes | Shipping address |
+| `phone` | Yes | Shipping/contact phone |
+| `address1` | Yes | Street/building/house |
+| `address2` | No | Apartment/landmark |
+| `city` | Yes | Validated against pincode |
+| `province` | Yes | Indian state/union territory |
+| `zip` | Yes | 6-digit Indian pincode |
+| `subscribeNewsletter` | No | `true` syncs marketing consent through Admin API |
 
-- **Method**: `POST`
-- **URL**: `/checkout`
-- **Content-Type**: `application/x-www-form-urlencoded`
+Common validation:
 
-##### Request Form Parameters
-| Field | Type | Required | Description |
-| :--- | :--- | :--- | :--- |
-| `email` | `string` | Yes | Customer's email address |
-| `firstName` | `string` | Yes | First name of recipient |
-| `lastName` | `string` | Yes | Last name / surname |
-| `phone` | `string` | Yes | Mobile number for order SMS/WhatsApp updates |
-| `address1` | `string` | Yes | Street address, flat/house number |
-| `address2` | `string` | No | Apartment, suite, unit, landmark |
-| `city` | `string` | Yes | City / town |
-| `province` | `string` | Yes | State / province (e.g., `Rajasthan`, `Maharashtra`) |
-| `zip` | `string` | Yes | PIN / Postal code |
+1. Required fields must be present.
+2. `locationService.validateConsistency(zip, city, province)` must pass.
+3. Newsletter opt-in is attempted in the background.
+4. A checkout session object is stored if not already present.
 
-##### Success Response (`302 Found` / Redirect)
-```http
-HTTP/1.1 302 Found
-Location: https://47751d.myshopify.com/checkouts/c/hWNG5jR9HVx89P0v2Q1s7Y
-```
+### Prepaid Branch
 
-##### Error Responses
-- **`400 Bad Request`**: Missing required fields.
-  ```json
-  { "error": "Please fill in all required contact and delivery address fields." }
-  ```
-- **`500 Internal Server Error`**:
-  ```json
-  { "error": "Unable to initialize payment gateway. Please try again." }
-  ```
+When `paymentMethod` is `PREPAID`:
 
----
+1. `cart.updateBuyerIdentity()` saves email, phone, and delivery address to Shopify cart.
+2. The route fetches the updated cart.
+3. If `checkoutUrl` exists, the customer is redirected to Shopify Hosted Checkout.
+4. Shopify Hosted Checkout handles CCAvenue/UPI/cards/netbanking.
 
-#### `GET /checkout` — Checkout Loader
-Pre-populates delivery fields if the customer is logged in, and validates that the cart is not empty.
+Discount note:
 
-- **Method**: `GET`
-- **URL**: `/checkout`
+- `app/services/shopify/discount.server.ts` contains `applyPrepaidDiscount()`.
+- The current `/checkout` action does not call it.
+- Treat prepaid discount application as Shopify-side configuration until code wiring is added.
 
-##### Success Response (`200 OK`)
-```json
-{
-  "cart": {
-    "id": "gid://shopify/Cart/hWNG5jR9HVx89P0v2Q1s7Y",
-    "totalQuantity": 1,
-    "checkoutUrl": "https://47751d.myshopify.com/checkouts/c/...",
-    "cost": {
-      "subtotalAmount": { "amount": "120.0", "currencyCode": "INR" }
-    }
-  },
-  "customer": {
-    "id": "gid://shopify/Customer/7123984128",
-    "firstName": "Abhinav",
-    "lastName": "Sharma",
-    "email": "customer@example.com",
-    "phone": "+919876543210",
-    "defaultAddress": {
-      "id": "gid://shopify/MailingAddress/...",
-      "address1": "42 Civil Lines",
-      "city": "Jaipur",
-      "province": "Rajasthan",
-      "zip": "302006",
-      "country": "India"
-    }
-  }
-}
-```
+### COD Branch
 
-##### Redirect Behavior
-- If cart is empty (`totalQuantity === 0` or `null`), redirects with `302 Found` to `/cart`.
+When `paymentMethod` is `COD`:
 
----
+1. The route reads cart lines.
+2. `createCodOrder()` builds Shopify draft order line items from cart variants.
+3. Admin GraphQL `draftOrderCreate` creates the draft order.
+4. Admin GraphQL `draftOrderComplete` completes the draft with `paymentPending: true`.
+5. `dispatchOrderConfirmationEmail()` sends the COD confirmation email.
+6. Cart lines are removed with `cart.removeLines()`.
+7. Checkout session data is cleared.
+8. Customer is redirected to `/thank-you?payment=cod&order=...`.
 
-### 3.3 Passwordless OTP Authentication
+COD failure returns a 400 response with a customer-facing error.
 
-#### `POST /account/login` — OTP Dispatch & Verification Action
-Manages the complete lifecycle of passwordless login: sending OTP, verifying OTP, and resetting input.
+## Customer Auth API
 
-- **Method**: `POST`
-- **URL**: `/account/login`
-- **Content-Type**: `application/x-www-form-urlencoded`
+### `GET /account/login`
 
----
+If `customerEmail` is already present in the session, redirects to the sanitized `return_to` destination. Otherwise returns login state for the OTP UI.
 
-#### Flow A: Dispatch OTP (`intent = 'send_otp'`)
+Allowed `return_to` values are currently limited by `sanitizeRedirect()` to:
 
-##### Request Parameters
-| Parameter | Type | Required | Description |
-| :--- | :--- | :--- | :--- |
-| `intent` | `string` | Yes | Constant value: `"send_otp"` |
-| `email` | `string` | Yes | Customer's email address |
-| `return_to` | `string` | No | Post-login redirect path (default: `/account`) |
+- `/checkout`
+- `/account`
+- `/cart`
 
-##### Success Response (`200 OK`)
-```json
-{
-  "step": "verify",
-  "email": "abhinav@example.com",
-  "successMessage": "A 6-digit verification code has been sent to abhinav@example.com. Check your inbox."
-}
-```
-**Response Headers**:
-```http
-Set-Cookie: __session=...; Path=/; HttpOnly; SameSite=Lax
+This means routes like `/account/orders/:id` currently fall back to `/account` after login.
+
+### `POST /account/login`
+
+Supported intents:
+
+| Intent | Behavior |
+|---|---|
+| `send_otp` | Generates and emails a 6-digit OTP |
+| `verify_otp` | Verifies OTP, syncs customer to Shopify, stores `customerEmail` |
+| `reset_email` | Clears current OTP challenge |
+
+Security behavior:
+
+- OTP is hashed with email and `SESSION_SECRET`.
+- Raw OTP is not persisted.
+- Challenge is marked `used` before customer sync to reduce replay risk.
+- Customer sync uses Admin API; no password is generated.
+
+## Customer Account APIs
+
+Authenticated account routes use the OTP session key `customerEmail`.
+
+### Profile
+
+`POST /api/account/profile`:
+
+- Resolves Shopify customer by current session email.
+- Updates first name, last name, and phone through Admin API.
+- Phone values are normalized toward Indian E.164 format.
+
+### Addresses
+
+`POST /api/account/address` supports:
+
+- `intent=add`
+- `intent=edit`
+- `intent=delete`
+- `intent=set-default`
+
+Address mutations use Shopify Admin API customer address mutations.
+
+### Email Change
+
+`POST /api/account/email-change` supports:
+
+- `intent=send_otp`
+- `intent=verify_otp`
+
+The new email must be verified before Shopify customer email and session `customerEmail` are updated.
+
+### Orders
+
+Order reads try:
+
+1. Storefront customer token order list, if a legacy `customerAccessToken` exists.
+2. Admin customer profile lookup by OTP `customerEmail`.
+3. Direct Admin order lookup for GIDs or numeric IDs.
+
+The service enforces email ownership on direct Admin order lookup to avoid IDOR exposure.
+
+If the Admin app lacks `read_orders`, the UI shows a scoped access notice rather than failing the whole account page.
+
+## Storefront GraphQL
+
+Important Storefront operations live in `app/graphql/StorefrontQueries.ts`.
+
+| Operation | Purpose |
+|---|---|
+| `HOMEPAGE_QUERY` | Shop info, featured collections, featured products, newest products |
+| `COLLECTIONS_QUERY` | Collection directory cards |
+| `ALL_PRODUCTS_QUERY` | Virtual all-products catalog |
+| `COLLECTION_BY_HANDLE_QUERY` | Collection header and product grid |
+| `PRODUCT_BY_HANDLE_QUERY` | PDP data, media, options, variants, SEO |
+| `RECOMMENDED_PRODUCTS_QUERY` | Shopify product recommendations |
+| `SEARCH_QUERY` | Product search and autocomplete |
+| `STOREFRONT_CUSTOMER_QUERY` | Legacy Storefront customer/profile/order read |
+
+## Shopify Admin GraphQL
+
+Server-only Admin API helpers live in `app/services/shopify`.
+
+| Service | Purpose |
+|---|---|
+| `adminToken.server.ts` | Static token or Client Credentials token exchange with in-memory cache |
+| `adminApi.server.ts` | Shared Admin GraphQL request wrapper |
+| `codOrder.server.ts` | COD draft order creation and completion |
+| `customer.server.ts` | Customer search/create/sync, profile, addresses, orders, newsletter |
+| `discount.server.ts` | Unused helper for applying prepaid cart discount codes |
+
+Required Admin credentials:
+
+```env
+SHOPIFY_ADMIN_API_VERSION="2025-01"
+SHOPIFY_ADMIN_CLIENT_ID="..."
+SHOPIFY_ADMIN_CLIENT_SECRET="..."
+# or
+SHOPIFY_ADMIN_API_TOKEN="shpat_..."
 ```
 
-##### Error Responses
-- **`400 Bad Request`**: Invalid email.
-  ```json
-  {
-    "error": "Please enter a valid email address.",
-    "step": "email"
-  }
-  ```
-- **`429 Too Many Requests`**: Rate limit active (60-second cooldown).
-  ```json
-  {
-    "error": "Please wait 42s before requesting a new code.",
-    "step": "verify",
-    "email": "abhinav@example.com"
-  }
-  ```
-- **`500 Internal Server Error`**: Delivery provider failure.
-  ```json
-  {
-    "error": "Could not deliver OTP email: SMTP connection timeout. Please try again.",
-    "step": "email"
-  }
-  ```
+## Email API
 
----
+Email dispatch flows through `app/services/email/dispatcher.server.ts`.
 
-#### Flow B: Verify OTP (`intent = 'verify_otp'`)
+Supported messages:
 
-##### Request Parameters
-| Parameter | Type | Required | Description |
-| :--- | :--- | :--- | :--- |
-| `intent` | `string` | Yes | Constant value: `"verify_otp"` |
-| `email` | `string` | Yes | The email address being verified |
-| `otp` | `string` | Yes | 6-digit numeric verification code (e.g., `"742918"`) |
-| `return_to` | `string` | No | Post-login redirect destination |
+- OTP login codes.
+- COD order confirmations.
+- Contact form inquiries.
 
-##### Success Response (`302 Found` / Redirect)
-```http
-HTTP/1.1 302 Found
-Location: /account
-Set-Cookie: __session=...; Path=/; HttpOnly; SameSite=Lax
-```
-*(On successful OTP match, the server automatically syncs or creates the customer profile in Shopify Admin without passwords).*
+SMTP implementation:
 
-##### Error Responses
-- **`400 Bad Request`**: Incorrect code.
-  ```json
-  {
-    "error": "Incorrect code. 4 attempts remaining.",
-    "step": "verify",
-    "email": "abhinav@example.com"
-  }
-  ```
-- **`400 Bad Request`**: Expired code or uninitialized challenge.
-  ```json
-  {
-    "error": "Your code has expired. Please request a new one.",
-    "step": "email"
-  }
-  ```
-- **`429 Too Many Requests`**: Exhausted all 5 attempts.
-  ```json
-  {
-    "error": "Too many incorrect attempts. Please request a new code.",
-    "step": "email"
-  }
-  ```
+- `GoogleSmtpEmailProvider`.
+- Gmail SMTP defaults to `smtp.gmail.com:465`.
+- Nodemailer is dynamically imported inside send methods.
+- If SMTP is unavailable, dispatcher logs development-mode output and reports success for local development.
 
----
+## Location API
 
-#### Flow C: Reset Challenge (`intent = 'reset_email'`)
-Allows the customer to change their entered email address.
+`GET /api/location?pincode=400001` validates pincode format, calls `locationService.lookupByPincode()`, and returns normalized city/state/district data.
 
-##### Request Parameters
-| Parameter | Type | Required | Description |
-| :--- | :--- | :--- | :--- |
-| `intent` | `string` | Yes | Constant value: `"reset_email"` |
+Provider:
 
-##### Success Response (`200 OK`)
-```json
-{
-  "step": "email"
-}
-```
+- `PostalPincodeProvider`
+- Default base URL: `https://api.postalpincode.in`
+- Default timeout: 5000ms
+- In-memory cache TTL: 24 hours
+- Max cache entries: 1000
 
----
+Checkout uses `validateConsistency()` server-side to ensure pincode, city, and state belong together.
 
-#### `GET /account/login` — Login Loader
-- **Method**: `GET`
-- **URL**: `/account/login?return_to=/checkout`
+## Catalog and Collection Contract
 
-##### Success Response (`200 OK`)
-```json
-{
-  "returnTo": "/checkout",
-  "hasActiveOtp": false,
-  "activeEmail": ""
-}
-```
-##### Redirect Behavior
-- If `customerEmail` is present in session, immediately redirects (`302`) to `returnTo` (or `/account`).
+Only these 10 parent collection handles should be used:
 
----
+1. `pouch-bags-toiletry-sets`
+2. `tote-bags`
+3. `mobile-sling-bags`
+4. `duffle-bags`
+5. `sunglasses-covers`
+6. `multi-utility-organizers`
+7. `laptop-bags-office-essentials`
+8. `wallets-clutches`
+9. `accessories`
+10. `kids-soft-toys`
 
-### 3.4 Customer Account APIs
+The old flat collection model should not be recreated.
 
-#### `GET /account` — Protected Customer Profile Dashboard Loader
-- **Method**: `GET`
-- **URL**: `/account`
-- **Authentication**: Requires valid `customerEmail` session cookie.
+## Known Current Gaps
 
-##### Success Response (`200 OK`)
-```json
-{
-  "customerEmail": "customer@example.com",
-  "customer": {
-    "id": "gid://shopify/Customer/7123984128",
-    "firstName": "Abhinav",
-    "lastName": "Sharma",
-    "email": "customer@example.com",
-    "phone": "+919876543210",
-    "numberOfOrders": 2,
-    "defaultAddress": {
-      "id": "gid://shopify/MailingAddress/82736192",
-      "address1": "42 Civil Lines",
-      "address2": "Floor 2",
-      "city": "Jaipur",
-      "province": "Rajasthan",
-      "zip": "302006",
-      "country": "India",
-      "phone": "+919876543210"
-    },
-    "addresses": {
-      "nodes": [
-        {
-          "id": "gid://shopify/MailingAddress/82736192",
-          "address1": "42 Civil Lines",
-          "city": "Jaipur",
-          "province": "Rajasthan",
-          "zip": "302006",
-          "country": "India"
-        }
-      ]
-    },
-    "orders": {
-      "nodes": [
-        {
-          "id": "gid://shopify/Order/5982749120",
-          "name": "#1002",
-          "orderNumber": "1002",
-          "processedAt": "2026-08-20T10:15:30Z",
-          "financialStatus": "PAID",
-          "fulfillmentStatus": "UNFULFILLED",
-          "totalPrice": {
-            "amount": "1490.0",
-            "currencyCode": "INR"
-          },
-          "lineItems": {
-            "nodes": [
-              {
-                "title": "Small Blue Floral Tote And Pouch Combo",
-                "quantity": 1,
-                "variant": {
-                  "title": "Default Title",
-                  "price": { "amount": "1490.0", "currencyCode": "INR" },
-                  "image": {
-                    "url": "https://cdn.shopify.com/s/files/1/0879/2928/2853/files/tote-combo.jpg",
-                    "altText": "Tote Bag"
-                  }
-                }
-              }
-            ]
-          }
-        }
-      ]
-    }
-  }
-}
-```
+| Gap | Impact | Likely Fix |
+|---|---|---|
+| Cart drawer links directly to Shopify `checkoutUrl` | Drawer users bypass COD/payment selector | Route drawer CTA to `/checkout` |
+| Prepaid discount helper is unused | App does not prove discount was applied before redirect | Wire `applyPrepaidDiscount()` or document Shopify-side automatic discount as source of truth |
+| Navigation fallback collection list is stale | If root collection query fails, fallback links point to old apparel handles | Replace fallback with the 10 parent collection handles |
+| Redirect allowlist is narrow | Login return to `/account/orders/:id` falls back to `/account` | Extend `sanitizeRedirect()` safely for internal account order paths |
+| Automated tests are missing | Checkout/account regressions rely on manual QA | Add focused route/service tests |
 
-##### Redirect Behavior
-- If unauthenticated, redirects (`302`) to `/account/login?return_to=/account`.
+## Deployment Notes
 
----
+Current checked-in deployment configuration:
 
-#### `GET /account/orders/:id` — Single Order Detail Loader
-Retrieves an individual order with strict verification that the order belongs to the requesting customer.
+- `react-router.config.ts` uses `vercelPreset()`.
+- `vercel.json` uses `"framework": "react-router"`.
 
-- **Method**: `GET`
-- **URL**: `/account/orders/:id` (e.g. `/account/orders/1002`)
-- **Authentication**: Requires authenticated session.
+Required production setup:
 
-##### Success Response (`200 OK`)
-```json
-{
-  "order": {
-    "id": "gid://shopify/Order/5982749120",
-    "name": "#1002",
-    "orderNumber": "1002",
-    "processedAt": "2026-08-20T10:15:30Z",
-    "financialStatus": "PAID",
-    "fulfillmentStatus": "FULFILLED",
-    "totalPrice": { "amount": "1490.0", "currencyCode": "INR" },
-    "statusUrl": "https://47751d.myshopify.com/orders/5982749120/authenticate?key=...",
-    "lineItems": {
-      "nodes": [
-        {
-          "title": "Small Blue Floral Tote And Pouch Combo",
-          "quantity": 1,
-          "variant": {
-            "title": "Default Title",
-            "price": { "amount": "1490.0", "currencyCode": "INR" }
-          }
-        }
-      ]
-    }
-  },
-  "customer": { "firstName": "Abhinav", "email": "customer@example.com" }
-}
-```
+1. Add all storefront environment variables.
+2. Add Admin API credentials for COD/customer/account operations.
+3. Add SMTP credentials for OTP, contact, and COD email.
+4. Confirm Shopify CCAvenue production/sandbox mode as appropriate.
+5. Run `npm run typecheck`.
+6. Run `npm run build`.
 
-##### Error Responses
-- **`404 Not Found`**: Order ID not found or customer is not the owner.
-  ```json
-  { "message": "Order Not Found" }
-  ```
+## Do Not Break
 
----
-
-### 3.5 Customer Session & OAuth APIs
-
-#### `GET /account/authorize` — Customer Account OAuth Callback Loader
-Used when logging in via Shopify Headless Customer Account API (OAuth exchange).
-
-- **Method**: `GET`
-- **URL**: `/account/authorize`
-- **Query Params**: Standard OAuth 2.0 query string from Shopify (`code`, `state`).
-- **Response**: `302 Found` with redirect to the original destination (`return_to` or `/account`) and updated session headers.
-
----
-
-#### `POST` / `GET /account/logout` — Customer Logout
-Revokes the customer token in Shopify, invalidates all session credentials (`customerEmail`, `customerAccessToken`, `otpData`), and returns the user to the login screen.
-
-- **Method**: `POST` or `GET`
-- **URL**: `/account/logout`
-- **Response**:
-  ```http
-  HTTP/1.1 302 Found
-  Location: /account/login
-  Set-Cookie: __session=; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT; HttpOnly
-  ```
-
----
-
-### 3.6 Catalog & Product Route APIs
-
-#### `GET /` — Homepage Data Loader
-Fetches hero collections, best-selling products, and latest releases in a single subrequest.
-
-- **Method**: `GET`
-- **URL**: `/`
-- **Subrequest Cache**: `CacheLong` (`public, max-age=3600, stale-while-revalidate=86400`)
-
-##### Success Response (`200 OK`)
-```json
-{
-  "baseUrl": "https://monts.in",
-  "shop": {
-    "name": "MONTS",
-    "description": "Artisanal Handcrafted Storefront"
-  },
-  "collections": [
-    {
-      "id": "gid://shopify/Collection/474149060901",
-      "title": "Wallet",
-      "handle": "wallet",
-      "description": "Artisanal wallets handcrafted with precision.",
-      "image": null
-    }
-  ],
-  "featuredProducts": [
-    {
-      "id": "gid://shopify/Product/884577884605",
-      "title": "Small Blue Floral Tote And Pouch Combo",
-      "handle": "small-blue-floral-tote-and-pouch-combo",
-      "vendor": "MONTS",
-      "featuredImage": {
-        "id": "gid://shopify/ProductImage/428912",
-        "url": "https://cdn.shopify.com/s/files/...",
-        "altText": "Combo",
-        "width": 1080,
-        "height": 1080
-      },
-      "priceRange": {
-        "minVariantPrice": { "amount": "120.0", "currencyCode": "INR" },
-        "maxVariantPrice": { "amount": "120.0", "currencyCode": "INR" }
-      },
-      "compareAtPriceRange": {
-        "minVariantPrice": { "amount": "0.0", "currencyCode": "INR" },
-        "maxVariantPrice": { "amount": "0.0", "currencyCode": "INR" }
-      },
-      "variants": {
-        "nodes": [
-          {
-            "id": "gid://shopify/ProductVariant/47260580970725",
-            "title": "Default Title",
-            "availableForSale": true,
-            "price": { "amount": "120.0", "currencyCode": "INR" }
-          }
-        ]
-      }
-    }
-  ],
-  "allProducts": [...]
-}
-```
-
----
-
-#### `GET /collections` — Collections Directory Loader
-Returns all published collections.
-
-- **Method**: `GET`
-- **URL**: `/collections`
-- **Subrequest Cache**: `CacheLong`
-
-##### Success Response (`200 OK`)
-```json
-{
-  "collections": [
-    {
-      "id": "gid://shopify/Collection/474149060901",
-      "title": "Wallet",
-      "handle": "wallet",
-      "description": "Artisanal wallets handcrafted with precision.",
-      "image": null
-    }
-  ]
-}
-```
-
----
-
-#### `GET /collections/:handle` — Collection Detail Loader
-Retrieves products for a specific collection or the virtual `/collections/all` catalog. Supports sorting and pagination.
-
-- **Method**: `GET`
-- **URL**: `/collections/:handle`
-- **Query Parameters**:
-  - `sort`: One of `best-selling` (default), `price-asc`, `price-desc`, `created-desc`, `title-asc`.
-
-##### Success Response (`200 OK`)
-```json
-{
-  "collection": {
-    "id": "gid://shopify/Collection/474149060901",
-    "title": "Wallet",
-    "handle": "wallet",
-    "description": "Handcrafted minimalist wallets."
-  },
-  "products": [
-    {
-      "id": "gid://shopify/Product/884577884605",
-      "title": "Small Blue Floral Tote And Pouch Combo",
-      "handle": "small-blue-floral-tote-and-pouch-combo",
-      "priceRange": {
-        "minVariantPrice": { "amount": "120.0", "currencyCode": "INR" }
-      }
-    }
-  ],
-  "currentSort": "best-selling",
-  "canonicalUrl": "https://monts.in/collections/wallet"
-}
-```
-
-##### Error Responses
-- **`404 Not Found`**: When collection does not exist.
-
----
-
-#### `GET /products/:handle` — Product Detail Page Loader
-Retrieves full details for a product, its variants, media gallery, and paired recommendations.
-
-- **Method**: `GET`
-- **URL**: `/products/:handle` (e.g. `/products/small-blue-floral-tote-and-pouch-combo`)
-
-##### Success Response (`200 OK`)
-```json
-{
-  "product": {
-    "id": "gid://shopify/Product/884577884605",
-    "title": "Small Blue Floral Tote And Pouch Combo",
-    "handle": "small-blue-floral-tote-and-pouch-combo",
-    "vendor": "MONTS",
-    "description": "Handmade with 100% pure organic cotton.",
-    "descriptionHtml": "<p>Handmade with 100% pure organic cotton.</p>",
-    "tags": ["cotton", "tote", "floral"],
-    "options": [
-      {
-        "name": "Title",
-        "values": ["Default Title"]
-      }
-    ],
-    "featuredImage": {
-      "id": "gid://shopify/ProductImage/428912",
-      "url": "https://cdn.shopify.com/s/files/...",
-      "altText": "Front View",
-      "width": 1080,
-      "height": 1080
-    },
-    "media": {
-      "nodes": [
-        {
-          "id": "gid://shopify/MediaImage/987123",
-          "mediaContentType": "IMAGE",
-          "image": {
-            "url": "https://cdn.shopify.com/s/files/...",
-            "altText": "Front View"
-          }
-        }
-      ]
-    },
-    "priceRange": {
-      "minVariantPrice": { "amount": "120.0", "currencyCode": "INR" }
-    },
-    "compareAtPriceRange": {
-      "minVariantPrice": { "amount": "0.0", "currencyCode": "INR" }
-    },
-    "variants": {
-      "nodes": [
-        {
-          "id": "gid://shopify/ProductVariant/47260580970725",
-          "title": "Default Title",
-          "availableForSale": true,
-          "sku": "MONTS-TOT-01",
-          "price": { "amount": "120.0", "currencyCode": "INR" },
-          "compareAtPrice": null,
-          "selectedOptions": [
-            { "name": "Title", "value": "Default Title" }
-          ]
-        }
-      ]
-    },
-    "seo": {
-      "title": "Small Blue Floral Tote | MONTS",
-      "description": "Handcrafted cotton tote and pouch combo."
-    }
-  },
-  "recommendedProducts": [],
-  "canonicalUrl": "https://monts.in/products/small-blue-floral-tote-and-pouch-combo"
-}
-```
-
-##### Error Responses
-- **`404 Not Found`**: When the requested product handle is not found.
-
----
-
-#### `GET /search` — Catalog Search Loader
-Executes live search against published products.
-
-- **Method**: `GET`
-- **URL**: `/search?q=tote`
-
-##### Success Response (`200 OK`)
-```json
-{
-  "query": "tote",
-  "totalCount": 4,
-  "products": [
-    {
-      "id": "gid://shopify/Product/884577884605",
-      "title": "Small Blue Floral Tote And Pouch Combo",
-      "handle": "small-blue-floral-tote-and-pouch-combo",
-      "priceRange": {
-        "minVariantPrice": { "amount": "120.0", "currencyCode": "INR" }
-      }
-    }
-  ]
-}
-```
-
----
-
-### 3.7 Content & Policy APIs
-
-#### `GET /pages/:handle` — Content Page Loader
-Loads static Shopify pages (`about-us`, `artisans`, etc.).
-
-- **Method**: `GET`
-- **URL**: `/pages/:handle`
-- **Success Response (`200 OK`)**:
-  ```json
-  {
-    "page": {
-      "id": "gid://shopify/Page/10928374",
-      "title": "Artisanal Legacy",
-      "handle": "artisanal-legacy",
-      "body": "<div>Handcrafted in Jaipur since 2021...</div>",
-      "seo": { "title": "Our Legacy", "description": "About our craft" }
-    }
-  }
-  ```
-
----
-
-#### `GET /policies/:handle` — Shop Legal Policy Loader
-Resolves store legal policies dynamically.
-- **Handled handles**: `privacy-policy`, `shipping-policy`, `terms-of-service`, `refund-policy`.
-- **Success Response (`200 OK`)**:
-  ```json
-  {
-    "policy": {
-      "id": "gid://shopify/ShopPolicy/PrivacyPolicy",
-      "title": "Privacy Policy",
-      "body": "<p>Your privacy is important to MONTS...</p>"
-    }
-  }
-  ```
-
----
-
-#### `GET /order/success` — Post-Checkout Order Confirmation Loader
-Verifies order completion and presents purchase confirmation.
-- **URL**: `/order/success?order_id=5982749120`
-- **Authentication**: Strictly enforces ownership against `customerAccessToken`.
-- **Success Response (`200 OK`)**:
-  ```json
-  {
-    "customer": { "id": "...", "email": "customer@example.com" },
-    "order": {
-      "id": "gid://shopify/Order/5982749120",
-      "name": "#1002",
-      "financialStatus": "PAID",
-      "fulfillmentStatus": "UNFULFILLED",
-      "totalPrice": { "amount": "1490.0", "currencyCode": "INR" }
-    }
-  }
-  ```
-
----
-
-#### `GET /thank-you` — Confirmation Return Loader
-- **URL**: `/thank-you?order=1002`
-- **Success Response (`200 OK`)**:
-  ```json
-  {
-    "storeDomain": "47751d.myshopify.com"
-  }
-  ```
-
----
-
-### 3.8 SEO & Crawling APIs
-
-#### `GET /sitemap.xml` — Dynamic XML Sitemap
-Generates an XML sitemap of all static pages, active collections, and visible products.
-
-- **Method**: `GET`
-- **URL**: `/sitemap.xml`
-- **Headers**:
-  ```http
-  Content-Type: application/xml
-  Cache-Control: max-age=86400
-  ```
-- **Response Payload**:
-  ```xml
-  <?xml version="1.0" encoding="UTF-8"?>
-  <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-    <url>
-      <loc>https://monts.in/</loc>
-      <changefreq>daily</changefreq>
-      <priority>1.0</priority>
-    </url>
-    <url>
-      <loc>https://monts.in/collections/wallet</loc>
-      <lastmod>2026-08-25T14:30:00Z</lastmod>
-      <changefreq>weekly</changefreq>
-      <priority>0.8</priority>
-    </url>
-    <url>
-      <loc>https://monts.in/products/small-blue-floral-tote-and-pouch-combo</loc>
-      <lastmod>2026-08-25T16:00:00Z</lastmod>
-      <changefreq>daily</changefreq>
-      <priority>0.9</priority>
-    </url>
-  </urlset>
-  ```
-
----
-
-#### `GET /robots.txt` — Crawler Directive
-- **Method**: `GET`
-- **URL**: `/robots.txt`
-- **Response**:
-  ```text
-  User-agent: *
-  Disallow: /account/
-  Disallow: /cart
-  Disallow: /search?*
-  Allow: /
-
-  Sitemap: https://monts.in/sitemap.xml
-  ```
-
----
-
-## 4. Layer 2: Shopify Storefront GraphQL Operations
-
-All Storefront API operations target:  
-`POST https://{PUBLIC_STORE_DOMAIN}/api/2025-01/graphql.json`  
-**Header**: `X-Shopify-Storefront-Access-Token: {PUBLIC_STOREFRONT_API_TOKEN}`
-
----
-
-### 4.1 Catalog Queries
-
-#### 1. `Homepage` (`HOMEPAGE_QUERY`)
-```graphql
-query Homepage(
-  $country: CountryCode
-  $language: LanguageCode
-  $collectionsFirst: Int = 3
-  $productsFirst: Int = 8
-) @inContext(country: $country, language: $language) {
-  shop { name description }
-  collections(first: $collectionsFirst, sortKey: UPDATED_AT, reverse: true) {
-    nodes { ...CollectionCardFragment }
-  }
-  featuredProducts: products(first: $productsFirst, sortKey: BEST_SELLING) {
-    nodes { ...ProductCardFragment }
-  }
-  allProducts: products(first: $productsFirst, sortKey: CREATED_AT, reverse: true) {
-    nodes { ...ProductCardFragment }
-  }
-}
-```
-
-##### Response Format
-```json
-{
-  "data": {
-    "shop": {
-      "name": "MONTS",
-      "description": "Artisanal Handcrafted Storefront"
-    },
-    "collections": {
-      "nodes": [
-        {
-          "id": "gid://shopify/Collection/474149060901",
-          "title": "Wallet",
-          "handle": "wallet",
-          "description": "Handcrafted minimalist wallets.",
-          "image": null
-        }
-      ]
-    },
-    "featuredProducts": {
-      "nodes": [
-        {
-          "id": "gid://shopify/Product/884577884605",
-          "title": "Small Blue Floral Tote And Pouch Combo",
-          "handle": "small-blue-floral-tote-and-pouch-combo",
-          "vendor": "MONTS",
-          "priceRange": {
-            "minVariantPrice": { "amount": "120.0", "currencyCode": "INR" },
-            "maxVariantPrice": { "amount": "120.0", "currencyCode": "INR" }
-          }
-        }
-      ]
-    },
-    "allProducts": { "nodes": [...] }
-  }
-}
-```
-
----
-
-#### 2. `ProductByHandle` (`PRODUCT_BY_HANDLE_QUERY`)
-```graphql
-query ProductByHandle($handle: String!) {
-  product(handle: $handle) {
-    id
-    title
-    handle
-    vendor
-    description
-    descriptionHtml
-    tags
-    options { name values }
-    featuredImage { url altText width height }
-    media(first: 10) {
-      nodes {
-        ... on MediaImage {
-          id
-          image { url altText }
-        }
-      }
-    }
-    priceRange {
-      minVariantPrice { amount currencyCode }
-    }
-    variants(first: 50) {
-      nodes {
-        id
-        title
-        availableForSale
-        sku
-        price { amount currencyCode }
-        compareAtPrice { amount currencyCode }
-        selectedOptions { name value }
-      }
-    }
-    seo { title description }
-  }
-}
-```
-
----
-
-#### 3. `SearchProducts` (`SEARCH_QUERY`)
-```graphql
-query SearchProducts($query: String!, $first: Int = 24) {
-  search(query: $query, first: $first, types: [PRODUCT]) {
-    totalCount
-    nodes {
-      ... on Product {
-        id
-        title
-        handle
-        priceRange {
-          minVariantPrice { amount currencyCode }
-        }
-      }
-    }
-  }
-}
-```
-
----
-
-### 4.2 Cart Mutations
-
-#### 1. `CartCreate` Mutation
-```graphql
-mutation CartCreate {
-  cartCreate {
-    cart {
-      id
-      checkoutUrl
-      totalQuantity
-    }
-    userErrors {
-      field
-      message
-    }
-  }
-}
-```
-##### Response Example
-```json
-{
-  "data": {
-    "cartCreate": {
-      "cart": {
-        "id": "gid://shopify/Cart/hWNG5jPZLp3x98",
-        "checkoutUrl": "https://47751d.myshopify.com/checkouts/c/hWNG5jPZLp3x98",
-        "totalQuantity": 0
-      },
-      "userErrors": []
-    }
-  }
-}
-```
-
----
-
-#### 2. `CartLinesAdd` Mutation
-```graphql
-mutation CartLinesAdd($cartId: ID!, $lines: [CartLineInput!]!) {
-  cartLinesAdd(cartId: $cartId, lines: $lines) {
-    cart {
-      id
-      totalQuantity
-      lines(first: 10) {
-        nodes {
-          id
-          quantity
-          merchandise {
-            ... on ProductVariant {
-              id
-              title
-            }
-          }
-        }
-      }
-      cost {
-        subtotalAmount { amount currencyCode }
-      }
-    }
-    userErrors { field message }
-  }
-}
-```
-
----
-
-#### 3. `CartBuyerIdentityUpdate` Mutation
-```graphql
-mutation CartBuyerIdentityUpdate(
-  $cartId: ID!
-  $buyerIdentity: CartBuyerIdentityInput!
-) {
-  cartBuyerIdentityUpdate(cartId: $cartId, buyerIdentity: $buyerIdentity) {
-    cart {
-      id
-      checkoutUrl
-      buyerIdentity {
-        email
-        phone
-      }
-    }
-    userErrors { field message }
-  }
-}
-```
-
----
-
-## 5. Layer 3: Shopify Admin GraphQL Operations (Server Services)
-
-Admin GraphQL API operations execute exclusively server-side via `app/services/shopify/customer.server.ts`.
-
----
-
-### 5.1 Admin Token Exchange
-
-Used when exchanging `SHOPIFY_ADMIN_CLIENT_ID` and `SHOPIFY_ADMIN_CLIENT_SECRET` for short-lived (~24h) cached admin tokens via Client Credentials Grant.
-
-- **Endpoint**: `POST https://{PUBLIC_STORE_DOMAIN}/admin/oauth/access_token`
-- **Request Body**:
-  ```json
-  {
-    "client_id": "c198e3b78...",
-    "client_secret": "shpss_91823...",
-    "grant_type": "client_credentials"
-  }
-  ```
-- **Success Response (`200 OK`)**:
-  ```json
-  {
-    "access_token": "shpat_a81239841...",
-    "scope": "read_customers,write_customers,read_orders",
-    "expires_in": 86400
-  }
-  ```
-
----
-
-### 5.2 Admin Customer Operations
-
-#### 1. Search Customer (`ADMIN_CUSTOMER_SEARCH`)
-```graphql
-query searchCustomer($query: String!) {
-  customers(first: 1, query: $query) {
-    nodes {
-      id
-      firstName
-      lastName
-      email
-      phone
-    }
-  }
-}
-```
-- **Variables**: `{ "query": "email:customer@example.com" }`
-- **Response**:
-  ```json
-  {
-    "data": {
-      "customers": {
-        "nodes": [
-          {
-            "id": "gid://shopify/Customer/7123984128",
-            "firstName": "Abhinav",
-            "lastName": "Sharma",
-            "email": "customer@example.com",
-            "phone": "+919876543210"
-          }
-        ]
-      }
-    }
-  }
-  ```
-
----
-
-#### 2. Create Passwordless Customer (`ADMIN_CUSTOMER_CREATE`)
-Creates a new verified customer record in Shopify upon first-time OTP verification.
-
-```graphql
-mutation adminCustomerCreate($input: CustomerInput!) {
-  customerCreate(input: $input) {
-    customer {
-      id
-      email
-      firstName
-    }
-    userErrors {
-      field
-      message
-    }
-  }
-}
-```
-- **Variables**:
-  ```json
-  {
-    "input": {
-      "email": "customer@example.com",
-      "firstName": "Abhinav",
-      "lastName": "Customer",
-      "emailMarketingConsent": {
-        "marketingState": "NOT_SUBSCRIBED",
-        "marketingOptInLevel": "SINGLE_OPT_IN"
-      }
-    }
-  }
-  ```
-
----
-
-#### 3. Fetch Full Profile with Orders (`ADMIN_CUSTOMER_WITH_ORDERS`)
-Fetches default shipping address, secondary addresses, and up to 20 past orders.
-
-```graphql
-query getAdminCustomerWithOrders($query: String!) {
-  customers(first: 1, query: $query) {
-    nodes {
-      id
-      firstName
-      lastName
-      email
-      phone
-      numberOfOrders
-      defaultAddress {
-        id
-        address1
-        address2
-        city
-        province
-        zip
-        country
-        phone
-      }
-      addresses {
-        id
-        address1
-        city
-        province
-        zip
-        country
-      }
-      orders(first: 20, sortKey: PROCESSED_AT, reverse: true) {
-        nodes {
-          id
-          name
-          processedAt
-          displayFinancialStatus
-          displayFulfillmentStatus
-          totalPriceSet {
-            shopMoney { amount currencyCode }
-          }
-          lineItems(first: 10) {
-            nodes {
-              title
-              quantity
-              variant {
-                title
-                price
-                image { url altText }
-              }
-            }
-          }
-        }
-      }
-    }
-  }
-}
-```
-
----
-
-## 6. Layer 4: Email & Notification Services
-
-Used for one-click passwordless verification codes, order confirmations, and customer contact inquiries dispatched via `app/services/email/dispatcher.server.ts`.
-
-### 6.1 Google SMTP Service
-- **Transport**: `nodemailer`
-- **Host**: `smtp.gmail.com:465` (SSL)
-- **Auth**: App Password (`SMTP_USER`, `SMTP_PASS`)
-- **Sender**: `MONTS <vastrabymonty@gmail.com>`
-- **Fallback**: Built-in development mode console logger for local testing.
-
----
-
-## 7. Master API Reference Matrix
-
-| Route / Endpoint | Protocol / Type | Auth Required | Purpose | Primary Responses |
-| :--- | :--- | :--- | :--- | :--- |
-| `POST /cart` | HTTP Action | Cookie Session | Add/update/remove cart line items | `200 OK` (Cart), `400 Bad Request` |
-| `GET /cart` | HTTP Loader | Cookie Session | Retrieve active cart | `200 OK` (Cart) |
-| `POST /checkout` | HTTP Action | No | Save delivery prefs & jump to checkout | `302 Redirect` to Hosted Checkout, `400` |
-| `GET /checkout` | HTTP Loader | No | Pre-populate customer details | `200 OK` (Cart + Profile), `302` (if empty) |
-| `POST /account/login` | HTTP Action | Session (OTP) | Dispatch / verify 6-digit OTP | `200 OK` (Step), `302` (Verified), `429` |
-| `GET /account/login` | HTTP Loader | Public | Check auth status / redirect if logged in | `200 OK`, `302` (if logged in) |
-| `GET /account` | HTTP Loader | Session (`customerEmail`) | Customer dashboard & past orders | `200 OK` (Profile + Orders), `302` (Login) |
-| `GET /account/orders/:id` | HTTP Loader | Session (`customerAccessToken`) | Single order tracking | `200 OK`, `404 Not Found` |
-| `GET /account/authorize` | HTTP Loader | OAuth 2.0 | Complete Shopify Customer Account OAuth | `302 Found` (Cookie handoff) |
-| `POST /account/logout` | HTTP Action | Session | Invalidate session & Shopify token | `302 Redirect` to `/account/login` |
-| `GET /` | HTTP Loader | Public | Homepage products & collections | `200 OK` (Hero, Carousels) |
-| `GET /collections` | HTTP Loader | Public | Collections directory | `200 OK` (All Collections) |
-| `GET /collections/:handle` | HTTP Loader | Public | Collection products & sorting | `200 OK` (Products), `404 Not Found` |
-| `GET /products/:handle` | HTTP Loader | Public | Product detail & recommendations | `200 OK` (PDP), `404 Not Found` |
-| `GET /search` | HTTP Loader | Public | Live product search | `200 OK` (Search Results) |
-| `GET /pages/:handle` | HTTP Loader | Public | Static CMS page body | `200 OK`, `404 Not Found` |
-| `GET /policies/:handle` | HTTP Loader | Public | Legal policy text | `200 OK`, `404 Not Found` |
-| `GET /order/success` | HTTP Loader | Session | Order confirmation after payment | `200 OK` (Order Details) |
-| `GET /thank-you` | HTTP Loader | Public | Thank you confirmation screen | `200 OK` |
-| `GET /sitemap.xml` | HTTP Loader | Public | XML search engine index | `200 OK` (`application/xml`) |
-| `GET /robots.txt` | HTTP Loader | Public | Crawler instructions | `200 OK` (`text/plain`) |
-| Storefront API | GraphQL | Public Token | Catalog, recommendations, cart mutations | `200 OK` (GraphQL JSON) |
-| Admin API | GraphQL | Server Token | Passwordless customer create & full sync | `200 OK` (Admin JSON) |
+- Do not expose `.env` files or Admin credentials.
+- Do not move `../monts-admin` scripts/assets into this public repo.
+- Do not bypass `codOrder.server.ts` for COD orders.
+- Do not statically import Nodemailer.
+- Do not recreate the old flat collection hierarchy.
+- Do not send raw S3 image URLs directly to Shopify media creation.

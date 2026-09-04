@@ -28,6 +28,13 @@ export const meta: MetaFunction = () => {
 
 import { getHydrogenContext } from '~/lib/context.server';
 
+const getImageUrl = (image?: { url?: string | null } | null) =>
+  typeof image?.url === 'string' && image.url.trim().length > 0 ? image.url : null;
+
+const hideBrokenImage = (event: React.SyntheticEvent<HTMLImageElement>) => {
+  event.currentTarget.style.display = 'none';
+};
+
 export async function loader({ request, context }: LoaderFunctionArgs) {
   const { storefront } = await getHydrogenContext(context, request);
   const url = new URL(request.url);
@@ -66,9 +73,15 @@ export default function IndexRoute() {
   useScrollReveal();
   const { baseUrl, collections, featuredProducts, allProducts } = useLoaderData<typeof loader>();
 
-  const heroImage =
-    featuredProducts[0]?.featuredImage?.url ||
-    'https://images.unsplash.com/photo-1583391733956-6c78276477e2?w=1600&q=85';
+  const catalogImages = [
+    ...featuredProducts.map((product) => getImageUrl(product.featuredImage)),
+    ...allProducts.map((product) => getImageUrl(product.featuredImage)),
+    ...collections.map((collection) => getImageUrl(collection.image)),
+  ].filter(Boolean) as string[];
+
+  const heroImage = catalogImages[0];
+  const newArrivalsImage = getImageUrl(allProducts[0]?.featuredImage) || catalogImages[1] || heroImage;
+  const craftImage = getImageUrl(collections[0]?.image) || catalogImages[2] || heroImage;
 
   const schemaJsonLd = {
     '@context': 'https://schema.org',
@@ -115,12 +128,15 @@ export default function IndexRoute() {
         style={{ minHeight: '85vh' }}
       >
         <div className="absolute inset-0 z-0">
-          <img
-            src={heroImage}
-            alt="MONTS Luxury Collection"
-            className="w-full h-full object-cover"
-            style={{ objectPosition: 'center 30%' }}
-          />
+          {heroImage && (
+            <img
+              src={heroImage}
+              alt="MONTS Luxury Collection"
+              className="w-full h-full object-cover"
+              style={{ objectPosition: 'center 30%' }}
+              onError={hideBrokenImage}
+            />
+          )}
           <div
             className="absolute inset-0"
             style={{
@@ -205,12 +221,7 @@ export default function IndexRoute() {
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               {collections.slice(0, 3).map((col, idx) => {
-                const fallbackImages = [
-                  'https://images.unsplash.com/photo-1585487000160-6ebcfceb0d03?w=800&q=80',
-                  'https://images.unsplash.com/photo-1617627143750-d86bc21e42bb?w=800&q=80',
-                  'https://images.unsplash.com/photo-1602810316693-3667c854239a?w=800&q=80',
-                ];
-                const colImage = col.image?.url || fallbackImages[idx % 3];
+                const colImage = getImageUrl(col.image) || catalogImages[idx % catalogImages.length];
 
                 return (
                   <Link
@@ -219,12 +230,15 @@ export default function IndexRoute() {
                     className="group relative overflow-hidden flex items-end p-6 rounded-[2px] border border-[#e8e4df]/60"
                     style={{ aspectRatio: '4/5' }}
                   >
-                    <img
-                      src={colImage}
-                      alt={col.title}
-                      loading="lazy"
-                      className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
-                    />
+                    {colImage && (
+                      <img
+                        src={colImage}
+                        alt={col.title}
+                        loading="lazy"
+                        className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
+                        onError={hideBrokenImage}
+                      />
+                    )}
                     <div
                       className="absolute inset-0"
                       style={{
@@ -269,11 +283,14 @@ export default function IndexRoute() {
             className="relative overflow-hidden flex items-end p-10 md:p-14"
             style={{ minHeight: '480px' }}
           >
-            <img
-              src="https://images.unsplash.com/photo-1610030469983-98e550d6193c?w=800&q=80"
-              alt="New Arrivals"
-              className="absolute inset-0 w-full h-full object-cover"
-            />
+            {newArrivalsImage && (
+              <img
+                src={newArrivalsImage}
+                alt="New Arrivals"
+                className="absolute inset-0 w-full h-full object-cover"
+                onError={hideBrokenImage}
+              />
+            )}
             <div
               className="absolute inset-0"
               style={{
@@ -308,11 +325,14 @@ export default function IndexRoute() {
             className="relative overflow-hidden flex items-end p-10 md:p-14 bg-[#e8dfd5]"
             style={{ minHeight: '480px' }}
           >
-            <img
-              src="https://images.unsplash.com/photo-1583391733956-6c78276477e2?w=800&q=80"
-              alt="Artisan Craft"
-              className="absolute inset-0 w-full h-full object-cover opacity-80"
-            />
+            {craftImage && (
+              <img
+                src={craftImage}
+                alt="Artisan Craft"
+                className="absolute inset-0 w-full h-full object-cover opacity-80"
+                onError={hideBrokenImage}
+              />
+            )}
             <div
               className="absolute inset-0"
               style={{
