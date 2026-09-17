@@ -87,6 +87,15 @@ export const PRODUCT_DETAIL_FRAGMENT = `#graphql
     description
     descriptionHtml
     tags
+    dimensions: metafield(namespace: "custom", key: "dimensions") {
+      value
+    }
+    collections(first: 1) {
+      nodes {
+        handle
+        title
+      }
+    }
     options {
       name
       values

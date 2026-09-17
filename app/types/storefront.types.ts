@@ -70,6 +70,15 @@ export interface ProductDetailItem {
   description: string;
   descriptionHtml: string;
   tags: string[];
+  dimensions?: {
+    value: string;
+  } | null;
+  collections?: {
+    nodes: {
+      handle: string;
+      title: string;
+    }[];
+  };
   options: {
     name: string;
     values: string[];

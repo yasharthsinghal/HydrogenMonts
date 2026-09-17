@@ -12,6 +12,7 @@ export interface AccordionProps {
   items: AccordionItem[];
   defaultOpenId?: string;
   allowMultiple?: boolean;
+  variant?: 'stacked' | 'tabs';
   className?: string;
 }
 
@@ -19,6 +20,7 @@ export const Accordion: React.FC<AccordionProps> = ({
   items,
   defaultOpenId,
   allowMultiple = false,
+  variant = 'stacked',
   className = '',
 }) => {
   const [openIds, setOpenIds] = useState<string[]>(defaultOpenId ? [defaultOpenId] : []);
@@ -32,6 +34,54 @@ export const Accordion: React.FC<AccordionProps> = ({
       setOpenIds((prev) => (prev.includes(id) ? [] : [id]));
     }
   };
+
+  if (variant === 'tabs') {
+    const activeId = openIds[0];
+    const activeItem = items.find((item) => item.id === activeId);
+
+    return (
+      <div className={`border-y border-[#e8e4df] ${className}`} style={{ fontFamily: "'DM Sans', sans-serif" }}>
+        <div
+          className="flex overflow-x-auto no-scrollbar border-b border-[#e8e4df]"
+          role="tablist"
+          aria-label="Product information"
+        >
+          {items.map((item) => {
+            const isActive = item.id === activeId;
+            return (
+              <button
+                key={item.id}
+                type="button"
+                role="tab"
+                id={`tab-${item.id}`}
+                aria-controls={`panel-${item.id}`}
+                aria-selected={isActive}
+                onClick={() => setOpenIds((current) => current[0] === item.id ? [] : [item.id])}
+                className={clsx(
+                  'relative shrink-0 px-4 py-3 text-xs font-semibold whitespace-nowrap transition-colors cursor-pointer',
+                  isActive ? 'text-[#c4622d]' : 'text-[#686764] hover:text-[#060505]',
+                )}
+              >
+                {item.title}
+                {isActive ? <span className="absolute inset-x-3 bottom-0 h-0.5 bg-[#c4622d]" /> : null}
+              </button>
+            );
+          })}
+        </div>
+        {activeItem ? (
+          <div
+            id={`panel-${activeItem.id}`}
+            role="tabpanel"
+            aria-labelledby={`tab-${activeItem.id}`}
+            className="px-4 py-4 text-sm text-[#686764]"
+            style={{ fontSize: '0.875rem', lineHeight: 1.65 }}
+          >
+            {activeItem.content}
+          </div>
+        ) : null}
+      </div>
+    );
+  }
 
   return (
     <div className={`divide-y divide-[#e8e4df] border-y border-[#e8e4df] ${className}`} style={{ fontFamily: "'DM Sans', sans-serif" }}>
@@ -55,7 +105,7 @@ export const Accordion: React.FC<AccordionProps> = ({
             {isOpen && (
               <div
                 className="pb-4 text-sm text-[#686764] leading-relaxed"
-                style={{ fontFamily: "'Cormorant', serif", fontSize: '1.15rem' }}
+                style={{ fontFamily: "'DM Sans', sans-serif", fontSize: '0.875rem', lineHeight: 1.65 }}
               >
                 {item.content}
               </div>
