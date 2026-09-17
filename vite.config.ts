@@ -28,6 +28,20 @@ export default defineConfig({
     build: {
         assetsInlineLimit: 0,
     },
+    server: {
+        watch: {
+            ignored: [
+                "**/.env*",
+                "**/*.env",
+                "**/*.log",
+                "**/logs/**",
+                "**/*.md",
+                "**/migrations/**",
+                "**/*migration*",
+                "**/*migrations*",
+            ],
+        },
+    },
     ssr: {
         optimizeDeps: {
             include: ["clsx", "tailwind-merge", "lucide-react"],

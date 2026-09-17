@@ -100,7 +100,7 @@ Checkout uses Gmail SMTP for COD order confirmation.
 Required variables:
 
 ```env
-ENABLE_GOOGLE_SMTP="true"
+OTP_EMAIL_PROVIDER="smtp"
 SMTP_HOST="smtp.gmail.com"
 SMTP_PORT="465"
 SMTP_USER="your_gmail_address"

@@ -35,7 +35,7 @@ Known code gap to fix next:
 | Shopify mutations | Shopify Admin GraphQL API `2025-01`, server-only |
 | Cart | Hydrogen cart handler, signed HTTP-only `__session` cookie |
 | Customer auth | Passwordless email OTP stored in signed session |
-| Email | Gmail SMTP through dynamic Nodemailer import |
+| Email | Gmail SMTP through dynamic Nodemailer import; mode selected by `OTP_EMAIL_PROVIDER` |
 | Location validation | India Post pincode API through server-side location service |
 
 Oxygen scripts remain available for Hydrogen compatibility: `dev:oxygen`, `build:oxygen`, and `preview`.
@@ -99,7 +99,7 @@ SHOPIFY_ADMIN_API_TOKEN="shpat_or_shpss_value"
 Required for OTP, order confirmation, and contact form email:
 
 ```env
-ENABLE_GOOGLE_SMTP="true"
+# smtp = Gmail SMTP app password, google_oauth2 = Gmail OAuth2, console_dev = log emails only.
 OTP_EMAIL_PROVIDER="smtp"
 SMTP_HOST="smtp.gmail.com"
 SMTP_PORT="465"
@@ -108,6 +108,17 @@ SMTP_PASS="your_16_character_google_app_password"
 SMTP_FROM="MONTS <your_gmail_address>"
 CONTACT_EMAIL_RECIPIENT="support_recipient"
 ```
+
+To use Gmail SMTP with OAuth2 instead of an app password, keep the existing SMTP values and set these server-side environment variables:
+
+```env
+OTP_EMAIL_PROVIDER="google_oauth2"
+GOOGLE_CLIENT_ID="your_google_oauth_client_id"
+GOOGLE_CLIENT_SECRET="your_google_oauth_client_secret"
+GOOGLE_REFRESH_TOKEN="your_google_oauth_refresh_token"
+```
+
+OAuth2 is opt-in. Existing deployments continue using `SMTP_PASS` while `OTP_EMAIL_PROVIDER="smtp"`.
 
 Optional:
 
@@ -150,6 +161,7 @@ The current repo is configured for Vercel:
 1. Create or select the Vercel project for `monts-hydrogen`.
 2. Set the framework to React Router if it is not auto-detected.
 3. Add all required storefront, Admin API, SMTP, and location environment variables in Vercel project settings.
+   Use `OTP_EMAIL_PROVIDER="smtp"` for the existing app-password flow or `OTP_EMAIL_PROVIDER="google_oauth2"` with Google OAuth2 credentials.
 4. Run `npm run build` locally before deployment.
 5. Deploy from the `main` branch.
 

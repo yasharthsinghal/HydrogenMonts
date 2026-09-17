@@ -14,6 +14,9 @@ build/
 .env.local
 .env.*.local
 
+# Markdown / documentation files
+*.md
+
 # Hydrogen & Oxygen CLI internal caches
 .shopify/
 .miniflare/
@@ -24,6 +27,7 @@ yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 *.log
+logs/
 
 # System files
 .DS_Store
@@ -33,3 +37,9 @@ Thumbs.db
 scripts/
 assets/
 *.csv
+
+# Migration artifacts
+migrations/
+**/migrations/
+*migration*
+*migrations*

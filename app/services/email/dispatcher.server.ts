@@ -1,4 +1,5 @@
 import { GoogleSmtpEmailProvider } from './smtp.server';
+import { getEmailProviderMode, isSmtpDeliveryEnabled } from './config.server';
 import type {
   SendOtpOptions,
   SendOrderConfirmationOptions,
@@ -8,21 +9,14 @@ import type {
 
 const smtpProvider = new GoogleSmtpEmailProvider();
 
-/**
- * Check if Google SMTP is active.
- * Default is active (enabled) unless explicitly set to "false".
- */
-function isSmtpActive(env: Env): boolean {
-  return env.ENABLE_GOOGLE_SMTP !== 'false';
-}
-
 export async function dispatchOtpEmail(
   options: SendOtpOptions,
   env: Env,
 ): Promise<EmailProviderResult> {
-  const isGoogleSmtpEnabled = isSmtpActive(env);
+  const providerMode = getEmailProviderMode(env);
+  const isGoogleSmtpEnabled = isSmtpDeliveryEnabled(env);
 
-  console.info(`[Email Dispatcher] Target: ${options.to} | Gmail SMTP Active: ${isGoogleSmtpEnabled}`);
+  console.info(`[Email Dispatcher] Target: ${options.to} | Provider: ${providerMode} | SMTP Active: ${isGoogleSmtpEnabled}`);
 
   // 1. If Google SMTP is enabled (default active for development), try SMTP
   if (isGoogleSmtpEnabled) {
@@ -38,7 +32,7 @@ export async function dispatchOtpEmail(
   console.info(`🔐 [MONTS OTP DISPATCH — Development Mode]`);
   console.info(`📧 Target: ${options.to}`);
   console.info(`🔑 6-Digit Code: ${options.code}`);
-  console.info(`ℹ️  Configured with Gmail SMTP. Set SMTP_USER and SMTP_PASS in .env for live inbox delivery.`);
+  console.info(`ℹ️  Set OTP_EMAIL_PROVIDER to "smtp" or "google_oauth2" with matching SMTP credentials for live inbox delivery.`);
   console.info(`======================================================\n`);
 
   return {
@@ -51,9 +45,10 @@ export async function dispatchOrderConfirmationEmail(
   options: SendOrderConfirmationOptions,
   env: Env,
 ): Promise<EmailProviderResult> {
-  const isGoogleSmtpEnabled = isSmtpActive(env);
+  const providerMode = getEmailProviderMode(env);
+  const isGoogleSmtpEnabled = isSmtpDeliveryEnabled(env);
 
-  console.info(`[Email Dispatcher - Order Confirmation] Order: ${options.orderName} | Target: ${options.to} | Gmail SMTP Active: ${isGoogleSmtpEnabled}`);
+  console.info(`[Email Dispatcher - Order Confirmation] Order: ${options.orderName} | Target: ${options.to} | Provider: ${providerMode} | SMTP Active: ${isGoogleSmtpEnabled}`);
 
   if (isGoogleSmtpEnabled) {
     const smtpResult = await smtpProvider.sendOrderConfirmation(options, env);
@@ -78,9 +73,10 @@ export async function dispatchContactInquiryEmail(
   options: SendContactInquiryOptions,
   env: Env,
 ): Promise<EmailProviderResult> {
-  const isGoogleSmtpEnabled = isSmtpActive(env);
+  const providerMode = getEmailProviderMode(env);
+  const isGoogleSmtpEnabled = isSmtpDeliveryEnabled(env);
 
-  console.info(`[Email Dispatcher - Contact Inquiry] From: ${options.fullName} (${options.email}) | To: ${options.to} | Gmail SMTP Active: ${isGoogleSmtpEnabled}`);
+  console.info(`[Email Dispatcher - Contact Inquiry] From: ${options.fullName} (${options.email}) | To: ${options.to} | Provider: ${providerMode} | SMTP Active: ${isGoogleSmtpEnabled}`);
 
   if (isGoogleSmtpEnabled) {
     const smtpResult = await smtpProvider.sendContactInquiry(options, env);
