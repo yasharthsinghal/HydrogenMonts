@@ -63,7 +63,10 @@ export async function loader({ params, request, context }: LoaderFunctionArgs) {
     try {
       const data = await storefront.query(ALL_PRODUCTS_QUERY, {
         variables: {
-          first: 24,
+          // Shopify permits up to 250 products per Storefront API connection.
+          // The all-products route should expose the complete current catalogue,
+          // rather than silently truncating it to the first grid page.
+          first: 250,
           sortKey: allSortKey,
           reverse,
         },
@@ -124,7 +127,7 @@ export async function loader({ params, request, context }: LoaderFunctionArgs) {
     const data = await storefront.query(COLLECTION_BY_HANDLE_QUERY, {
       variables: {
         handle,
-        first: 24,
+        first: 250,
         sortKey,
         reverse,
       },

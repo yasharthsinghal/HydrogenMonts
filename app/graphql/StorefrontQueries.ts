@@ -11,7 +11,8 @@ export const HOMEPAGE_QUERY = `#graphql
     $country: CountryCode
     $language: LanguageCode
     $collectionsFirst: Int = 3
-    $productsFirst: Int = 8
+    $featuredProductsFirst: Int = 8
+    $allProductsFirst: Int = 250
   ) @inContext(country: $country, language: $language) {
     shop {
       name
@@ -22,12 +23,12 @@ export const HOMEPAGE_QUERY = `#graphql
         ...CollectionCardFragment
       }
     }
-    featuredProducts: products(first: $productsFirst, sortKey: BEST_SELLING) {
+    featuredProducts: products(first: $featuredProductsFirst, sortKey: BEST_SELLING) {
       nodes {
         ...ProductCardFragment
       }
     }
-    allProducts: products(first: $productsFirst, sortKey: CREATED_AT, reverse: true) {
+    allProducts: products(first: $allProductsFirst, sortKey: CREATED_AT, reverse: true) {
       nodes {
         ...ProductCardFragment
       }

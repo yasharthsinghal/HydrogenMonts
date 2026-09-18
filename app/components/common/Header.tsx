@@ -8,14 +8,12 @@ import type { ProductCardItem } from '~/types/storefront.types';
 export interface HeaderProps {
   cartCount?: number;
   onOpenMobileNav?: () => void;
-  onOpenCart?: () => void;
   onOpenSearch?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
   cartCount = 0,
   onOpenMobileNav,
-  onOpenCart,
   onOpenSearch,
 }) => {
   const [isScrolled, setIsScrolled] = useState(false);
@@ -190,42 +188,22 @@ export const Header: React.FC<HeaderProps> = ({
             </Link>
 
             {/* Cart Trigger */}
-            {onOpenCart ? (
-              <button
-                type="button"
-                onClick={onOpenCart}
-                className="relative flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-[5px] bg-[#c4622d] text-white hover:bg-[#923f12] active:scale-95 transition-all cursor-pointer shadow-xs"
-                aria-label="Shopping Cart Drawer"
-              >
-                <ShoppingBag className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">Cart</span>
-                {cartCount > 0 && (
-                  <span
-                    key={cartCount}
-                    className="flex items-center justify-center w-4 h-4 text-[9px] font-bold rounded-full bg-white text-[#c4622d] animate-badge-pop"
-                  >
-                    {cartCount}
-                  </span>
-                )}
-              </button>
-            ) : (
-              <Link
-                to="/cart"
-                className="relative flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-[5px] bg-[#c4622d] text-white hover:bg-[#923f12] active:scale-95 transition-all cursor-pointer shadow-xs"
-                aria-label="Shopping Cart"
-              >
-                <ShoppingBag className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">Cart</span>
-                {cartCount > 0 && (
-                  <span
-                    key={cartCount}
-                    className="flex items-center justify-center w-4 h-4 text-[9px] font-bold rounded-full bg-white text-[#c4622d] animate-badge-pop"
-                  >
-                    {cartCount}
-                  </span>
-                )}
-              </Link>
-            )}
+            <Link
+              to="/cart"
+              className="relative flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-[5px] bg-[#c4622d] text-white hover:bg-[#923f12] active:scale-95 transition-all cursor-pointer shadow-xs"
+              aria-label="Shopping Cart"
+            >
+              <ShoppingBag className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Cart</span>
+              {cartCount > 0 && (
+                <span
+                  key={cartCount}
+                  className="flex items-center justify-center w-4 h-4 text-[9px] font-bold rounded-full bg-white text-[#c4622d] animate-badge-pop"
+                >
+                  {cartCount}
+                </span>
+              )}
+            </Link>
           </div>
         </div>
       </div>

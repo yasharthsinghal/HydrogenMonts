@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Link, useFetcher } from 'react-router';
+import React, { useEffect, useState } from 'react';
+import { Link, useFetcher, useNavigate } from 'react-router';
 import { Eye, ShoppingBag, Loader2 } from 'lucide-react';
 import type { ProductCardItem } from '~/types/storefront.types';
 import { Badge } from '~/components/ui/Badge';
@@ -16,8 +16,18 @@ export const ProductCard: React.FC<ProductCardProps> = ({
   onAddToCart,
 }) => {
   const [isHovered, setIsHovered] = useState(false);
-  const fetcher = useFetcher();
+  const fetcher = useFetcher<{ cart?: { id?: string }; error?: string }>();
+  const navigate = useNavigate();
+  const [openCartWhenAdded, setOpenCartWhenAdded] = useState(false);
   const isAdding = fetcher.state !== 'idle';
+
+  useEffect(() => {
+    if (!openCartWhenAdded || fetcher.state !== 'idle' || !fetcher.data) return;
+    setOpenCartWhenAdded(false);
+    if (fetcher.data.cart && !fetcher.data.error) {
+      navigate('/cart');
+    }
+  }, [fetcher.data, fetcher.state, navigate, openCartWhenAdded]);
 
   const featuredImage = product.featuredImage?.url;
   const secondaryImage = product.images?.nodes?.[1]?.url || featuredImage;
@@ -37,21 +47,26 @@ export const ProductCard: React.FC<ProductCardProps> = ({
 
     if (!firstVariant?.id) return;
 
+    setOpenCartWhenAdded(true);
+
     fetcher.submit(
       {
         cartFormInput: JSON.stringify({
           action: 'LinesAdd',
           inputs: {
-            lines: [{ merchandiseId: firstVariant.id, quantity: 1 }],
+            lines: [
+              {
+                merchandiseId: firstVariant.id,
+                quantity: 1,
+                selectedVariant: firstVariant,
+              },
+            ],
           },
         }),
       },
       { method: 'POST', action: '/cart' },
     );
 
-    if (typeof window !== 'undefined') {
-      window.dispatchEvent(new CustomEvent('open-cart'));
-    }
   };
 
   const formatPrice = (amount: string, currency: string) => {

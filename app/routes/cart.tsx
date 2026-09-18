@@ -6,6 +6,8 @@ import { EmptyState } from '~/components/ui/EmptyState';
 import { Button } from '~/components/ui/Button';
 import { ShoppingBag, ArrowRight } from 'lucide-react';
 import { logger } from '~/utils/logger.server';
+import { useOptimisticCart } from '@shopify/hydrogen';
+import { getCartLines, normalizeCartForOptimistic } from '~/utils/cart';
 
 import { getHydrogenContext } from '~/lib/context.server';
 
@@ -72,27 +74,30 @@ export async function loader({ context, request }: LoaderFunctionArgs) {
 
 export default function CartRoute() {
   const { cart } = useLoaderData<typeof loader>() as { cart: any };
+  const activeCart = useOptimisticCart(normalizeCartForOptimistic(cart));
   const [isRedirecting, setIsRedirecting] = useState(false);
   const fetcher = useFetcher();
   const isMutating = fetcher.state !== 'idle';
 
-  const lines =
-    cart?.lines?.nodes ||
-    (cart?.lines?.edges ? cart.lines.edges.map((e: any) => e.node) : null) ||
-    (Array.isArray(cart?.lines) ? cart.lines : []);
+  const lines = getCartLines(activeCart);
 
-  const subtotal = cart?.cost?.subtotalAmount?.amount
-    ? parseFloat(cart.cost.subtotalAmount.amount)
-    : cart?.cost?.totalAmount?.amount
-    ? parseFloat(cart.cost.totalAmount.amount)
-    : lines.reduce((sum: number, line: any) => {
-        const p = parseFloat(line?.cost?.totalAmount?.amount || line?.merchandise?.price?.amount || 0);
-        return sum + (isNaN(p) ? 0 : p);
-      }, 0);
+  const calculatedSubtotal = lines.reduce((sum: number, line: any) => {
+    const unitPrice = parseFloat(
+      line?.cost?.amountPerQuantity?.amount || line?.merchandise?.price?.amount || 0,
+    );
+    return sum + (isNaN(unitPrice) ? 0 : unitPrice * (line?.quantity || 0));
+  }, 0);
+  const subtotal = activeCart?.isOptimistic
+    ? calculatedSubtotal
+    : activeCart?.cost?.subtotalAmount?.amount
+    ? parseFloat(activeCart.cost.subtotalAmount.amount)
+    : activeCart?.cost?.totalAmount?.amount
+    ? parseFloat(activeCart.cost.totalAmount.amount)
+    : calculatedSubtotal;
 
   const currencyCode =
-    cart?.cost?.subtotalAmount?.currencyCode ||
-    cart?.cost?.totalAmount?.currencyCode ||
+    activeCart?.cost?.subtotalAmount?.currencyCode ||
+    activeCart?.cost?.totalAmount?.currencyCode ||
     'INR';
 
   const formatPrice = (amount: number, currency: string) => {
@@ -104,7 +109,7 @@ export default function CartRoute() {
   };
 
   const handleCheckout = (e: React.MouseEvent<HTMLAnchorElement>) => {
-    if (!cart?.checkoutUrl || isRedirecting) return;
+    if (!activeCart?.checkoutUrl || isRedirecting) return;
     setIsRedirecting(true);
   };
 
@@ -175,7 +180,7 @@ export default function CartRoute() {
             <div className="flex flex-col gap-3 text-sm">
               <div className="flex justify-between text-[#686764]">
                 <span>Total Items</span>
-                <span>{cart?.totalQuantity || 0}</span>
+                <span>{activeCart?.totalQuantity || 0}</span>
               </div>
               <div className="flex justify-between text-[#686764]">
                 <span>Domestic Shipping (India)</span>

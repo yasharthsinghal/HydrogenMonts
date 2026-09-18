@@ -45,7 +45,8 @@ export async function loader({ request, context }: LoaderFunctionArgs) {
     const response = await storefront.query(HOMEPAGE_QUERY, {
       variables: {
         collectionsFirst: 3,
-        productsFirst: 8,
+        featuredProductsFirst: 8,
+        allProductsFirst: 250,
       },
       cache: storefront.CacheNone(),
     });

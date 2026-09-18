@@ -6,6 +6,7 @@ export interface CartLineItemProps {
   line: {
     id: string;
     quantity: number;
+    isOptimistic?: boolean;
     cost: {
       amountPerQuantity: {
         amount: string;
@@ -69,9 +70,9 @@ export const CartItem: React.FC<CartLineItemProps> = ({
     cost?.amountPerQuantity?.currencyCode ||
     (merchandise as any)?.price?.currencyCode ||
     'INR';
-  const totalAmount =
-    cost?.totalAmount?.amount ||
-    (parseFloat(unitAmount) * quantity).toString();
+  const totalAmount = line?.isOptimistic
+    ? (parseFloat(unitAmount) * quantity).toString()
+    : cost?.totalAmount?.amount || (parseFloat(unitAmount) * quantity).toString();
   const totalCurrency =
     cost?.totalAmount?.currencyCode || unitCurrency;
 

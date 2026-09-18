@@ -10,14 +10,15 @@ import {
   isRouteErrorResponse,
   type LoaderFunctionArgs,
 } from 'react-router';
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
+import { useOptimisticCart } from '@shopify/hydrogen';
 import appStyles from '~/styles/app.css?url';
 import { Header } from '~/components/common/Header';
 import { Footer } from '~/components/common/Footer';
 import { MobileNav } from '~/components/common/MobileNav';
-import { CartDrawer } from '~/components/cart/CartDrawer';
 import { PageProgressLoader } from '~/components/common/PageProgressLoader';
 import { ScrollToTop } from '~/components/common/ScrollToTop';
+import { normalizeCartForOptimistic } from '~/utils/cart';
 
 import { getHydrogenContext } from '~/lib/context.server';
 
@@ -62,17 +63,8 @@ export async function loader({ context, request }: LoaderFunctionArgs) {
 
 export function Layout({ children }: { children?: React.ReactNode }) {
   const data = useRouteLoaderData<typeof loader>('root');
-  const cart = data?.cart;
+  const cart = useOptimisticCart(normalizeCartForOptimistic(data?.cart));
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
-  const [cartOpen, setCartOpen] = useState(false);
-
-  // Global listener for opening cart drawer from anywhere (product card, quick actions)
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    const handleOpenCart = () => setCartOpen(true);
-    window.addEventListener('open-cart', handleOpenCart);
-    return () => window.removeEventListener('open-cart', handleOpenCart);
-  }, []);
 
   return (
     <html lang="en" suppressHydrationWarning>
@@ -91,7 +83,6 @@ export function Layout({ children }: { children?: React.ReactNode }) {
         <Header
           cartCount={cart?.totalQuantity ?? 0}
           onOpenMobileNav={() => setMobileNavOpen(true)}
-          onOpenCart={() => setCartOpen(true)}
         />
 
         <main className="flex-1">
@@ -103,12 +94,6 @@ export function Layout({ children }: { children?: React.ReactNode }) {
         <MobileNav
           isOpen={mobileNavOpen}
           onClose={() => setMobileNavOpen(false)}
-        />
-
-        <CartDrawer
-          isOpen={cartOpen}
-          onClose={() => setCartOpen(false)}
-          cart={cart}
         />
 
         <ScrollToTop />

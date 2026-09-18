@@ -1,5 +1,6 @@
-import { Link, useLoaderData, useFetcher, useNavigate, type MetaFunction, type LoaderFunctionArgs } from "react-router";
+import { Link, useLoaderData, useFetcher, useNavigate, useRouteLoaderData, type MetaFunction, type LoaderFunctionArgs } from "react-router";
 import { useState, useEffect } from "react";
+import { useOptimisticCart } from "@shopify/hydrogen";
 import {
     PRODUCT_BY_HANDLE_QUERY,
     RECOMMENDED_PRODUCTS_QUERY,
@@ -26,6 +27,7 @@ import {
     X,
 } from "lucide-react";
 import { clsx } from "clsx";
+import { getCartLines, normalizeCartForOptimistic } from "~/utils/cart";
 
 export const meta: MetaFunction<typeof loader> = ({ data }) => {
     if (!data?.product) {
@@ -98,6 +100,10 @@ export default function ProductDetailRoute() {
         useLoaderData<typeof loader>();
 
     const navigate = useNavigate();
+    const rootData = useRouteLoaderData("root") as { cart?: any } | undefined;
+    const cart = useOptimisticCart(
+        normalizeCartForOptimistic(rootData?.cart),
+    );
     const variants = product.variants?.nodes || [];
     const [selectedVariant, setSelectedVariant] = useState<ProductVariantNode>(
         variants[0] || ({} as ProductVariantNode),
@@ -164,6 +170,12 @@ export default function ProductDetailRoute() {
         compareAtPrice &&
         parseFloat(compareAtPrice.amount) > parseFloat(price.amount);
     const isAvailable = selectedVariant?.availableForSale ?? true;
+    const cartLines = getCartLines(cart);
+    const selectedCartLine = cartLines.find(
+        (line: any) => line?.merchandise?.id === selectedVariant?.id,
+    );
+    const isInCart = Boolean(selectedCartLine);
+    const displayedQuantity = selectedCartLine?.quantity ?? quantity;
     const primaryCollection = product.collections?.nodes?.[0];
     const taggedCollectionHandle = product.tags
         ?.find((tag) => tag.startsWith("category:"))
@@ -188,6 +200,10 @@ export default function ProductDetailRoute() {
     };
 
     const handleAddToCart = () => {
+        if (isInCart) {
+            navigate("/cart");
+            return;
+        }
         if (!selectedVariant?.id || !isAvailable || isSubmitting) return;
         setAddingToCart(true);
 
@@ -201,6 +217,7 @@ export default function ProductDetailRoute() {
                         {
                             merchandiseId: selectedVariant.id,
                             quantity,
+                            selectedVariant,
                         },
                     ],
                 },
@@ -211,6 +228,10 @@ export default function ProductDetailRoute() {
     };
 
     const handleBuyNow = () => {
+        if (isInCart) {
+            navigate("/checkout");
+            return;
+        }
         if (!selectedVariant?.id || !isAvailable || isSubmitting) return;
         setIsBuyingNow(true);
 
@@ -224,12 +245,39 @@ export default function ProductDetailRoute() {
                         {
                             merchandiseId: selectedVariant.id,
                             quantity,
+                            selectedVariant,
                         },
                     ],
                 },
             }),
         );
 
+        cartFetcher.submit(formData, { method: "POST", action: "/cart" });
+    };
+
+    const handleQuantityChange = (nextQuantity: number) => {
+        const normalizedQuantity = Math.max(1, nextQuantity);
+
+        if (!selectedCartLine?.id) {
+            setQuantity(normalizedQuantity);
+            return;
+        }
+
+        const formData = new FormData();
+        formData.append(
+            "cartFormInput",
+            JSON.stringify({
+                action: "LinesUpdate",
+                inputs: {
+                    lines: [
+                        {
+                            id: selectedCartLine.id,
+                            quantity: normalizedQuantity,
+                        },
+                    ],
+                },
+            }),
+        );
         cartFetcher.submit(formData, { method: "POST", action: "/cart" });
     };
 
@@ -453,11 +501,10 @@ export default function ProductDetailRoute() {
                                                 return (
                                                     <button
                                                         key={v.id}
-                                                        onClick={() =>
-                                                            setSelectedVariant(
-                                                                v,
-                                                            )
-                                                        }
+                                                        onClick={() => {
+                                                            setSelectedVariant(v);
+                                                            setQuantity(1);
+                                                        }}
                                                         disabled={
                                                             !v.availableForSale
                                                         }
@@ -486,17 +533,19 @@ export default function ProductDetailRoute() {
                             <div className='flex items-center border border-[#e8e4df] rounded-[6px] bg-[#faf8f5]' aria-label='Quantity selector'>
                                 <button
                                     type='button'
-                                    onClick={() => setQuantity((q) => Math.max(1, q - 1))}
+                                    onClick={() => handleQuantityChange(displayedQuantity - 1)}
+                                    disabled={isSubmitting}
                                     className='p-2.5 text-[#686764] hover:text-[#060505] cursor-pointer'
                                     aria-label='Decrease quantity'>
                                     <Minus className='w-3.5 h-3.5' />
                                 </button>
                                 <span className='px-2 text-sm font-semibold text-[#060505] min-w-[30px] text-center'>
-                                    {quantity}
+                                    {displayedQuantity}
                                 </span>
                                 <button
                                     type='button'
-                                    onClick={() => setQuantity((q) => q + 1)}
+                                    onClick={() => handleQuantityChange(displayedQuantity + 1)}
+                                    disabled={isSubmitting}
                                     className='p-2.5 text-[#686764] hover:text-[#060505] cursor-pointer'
                                     aria-label='Increase quantity'>
                                     <Plus className='w-3.5 h-3.5' />
@@ -510,7 +559,7 @@ export default function ProductDetailRoute() {
                                 disabled={isPending}
                                 isLoading={addingToCart && isPending}>
                                 <ShoppingBag className='w-4 h-4' />
-                                {addingToCart ? "Adding..." : "Add to Bag"}
+                                {addingToCart ? "Adding..." : isInCart ? "Go to Cart" : "Add to Bag"}
                             </Button>
                             <Button
                                 variant='primary'
@@ -541,9 +590,9 @@ export default function ProductDetailRoute() {
                     <div className='md:hidden fixed bottom-0 left-0 right-0 z-40 bg-[#faf8f5]/95 backdrop-blur-md border-t border-[#e8e4df] p-3 px-4 shadow-[0_-4px_20px_rgba(0,0,0,0.08)] flex items-center gap-3'>
                         {isAvailable ? <>
                         <div className='flex items-center border border-[#e8e4df] rounded-[6px] bg-white'>
-                            <button type='button' onClick={() => setQuantity((q) => Math.max(1, q - 1))} className='p-2' aria-label='Decrease quantity'><Minus className='w-3.5 h-3.5' /></button>
-                            <span className='min-w-6 text-center text-xs font-semibold'>{quantity}</span>
-                            <button type='button' onClick={() => setQuantity((q) => q + 1)} className='p-2' aria-label='Increase quantity'><Plus className='w-3.5 h-3.5' /></button>
+                            <button type='button' onClick={() => handleQuantityChange(displayedQuantity - 1)} disabled={isSubmitting} className='p-2 disabled:opacity-50' aria-label='Decrease quantity'><Minus className='w-3.5 h-3.5' /></button>
+                            <span className='min-w-6 text-center text-xs font-semibold'>{displayedQuantity}</span>
+                            <button type='button' onClick={() => handleQuantityChange(displayedQuantity + 1)} disabled={isSubmitting} className='p-2 disabled:opacity-50' aria-label='Increase quantity'><Plus className='w-3.5 h-3.5' /></button>
                         </div>
                         <Button
                             variant='outline'
@@ -553,7 +602,7 @@ export default function ProductDetailRoute() {
                             disabled={isPending}
                             isLoading={addingToCart && isPending}>
                             <ShoppingBag className='w-4 h-4' />
-                            {addingToCart ? "Adding..." : "Add to Bag"}
+                            {addingToCart ? "Adding..." : isInCart ? "Go to Cart" : "Add to Bag"}
                         </Button>
 
                         <Button

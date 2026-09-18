@@ -4,7 +4,7 @@ import { useEffect } from 'react';
  * Hook to automatically reveal elements with class `.reveal` when they enter the viewport.
  * SSR-safe and uses passive observation with unobserve on reveal.
  */
-export function useScrollReveal(selector = '.reveal', threshold = 0.12) {
+export function useScrollReveal(selector = '.reveal', threshold = 0) {
   useEffect(() => {
     if (typeof window === 'undefined' || !('IntersectionObserver' in window)) {
       // Fallback: make everything visible immediately if IntersectionObserver is unsupported
