@@ -113,6 +113,7 @@ export default function ProductDetailRoute() {
     const [quantity, setQuantity] = useState(1);
     const [addingToCart, setAddingToCart] = useState(false);
     const [isBuyingNow, setIsBuyingNow] = useState(false);
+    const [activeProductTab, setActiveProductTab] = useState<string | undefined>();
 
     const cartFetcher = useFetcher<{ cart?: { checkoutUrl?: string; id?: string; totalQuantity?: number }; error?: string }>();
     const isSubmitting = cartFetcher.state !== "idle";
@@ -188,6 +189,16 @@ export default function ProductDetailRoute() {
     const browseCollectionUrl = browseCollectionHandle
         ? `/collections/${browseCollectionHandle}`
         : "/collections/all";
+    const detailImages = images
+        .filter((imageUrl) => imageUrl !== images[selectedImageIndex])
+        .slice(0, 2);
+    const openZoomForImage = (imageUrl: string) => {
+        const nextIndex = images.findIndex((candidate) => candidate === imageUrl);
+        if (nextIndex >= 0) {
+            setSelectedImageIndex(nextIndex);
+        }
+        setIsImageZoomed(true);
+    };
 
     const formatPrice = (amount: string, currency: string) => {
         const numeric = parseFloat(amount);
@@ -353,68 +364,95 @@ export default function ProductDetailRoute() {
             {/* ─── MAIN PDP GRID ─── */}
             <div className='grid grid-cols-1 lg:grid-cols-12 items-start gap-8 lg:gap-8 pb-6 border-b border-[#e8e4df]'>
                 {/* Compact square media gallery */}
-                <div className='lg:col-span-7 flex flex-col-reverse md:flex-row items-start gap-4 w-full max-w-[720px]'>
-                    {images.length > 1 && (
-                        <div className='flex md:flex-col gap-3 overflow-x-auto md:overflow-y-auto no-scrollbar md:max-h-[540px] shrink-0'>
-                            {images.map((imgUrl, i) => (
+                <div className='lg:col-span-7 flex w-full max-w-[720px] flex-col gap-4'>
+                    <div className='flex flex-col-reverse md:flex-row items-start gap-4'>
+                        {images.length > 1 && (
+                            <div className='flex md:flex-col gap-3 overflow-x-auto md:overflow-y-auto no-scrollbar md:max-h-[540px] shrink-0'>
+                                {images.map((imgUrl, i) => (
+                                    <button
+                                        key={i}
+                                        onClick={() => {
+                                            setSelectedImageIndex(i);
+                                            setIsImageZoomed(false);
+                                        }}
+                                        className={clsx(
+                                            "w-16 h-16 sm:w-20 sm:h-20 rounded-[2px] overflow-hidden border transition-all shrink-0 cursor-pointer bg-[#f5f0e8]",
+                                            selectedImageIndex === i
+                                                ? "border-[#c4622d] ring-1 ring-[#c4622d]"
+                                                : "border-[#e8e4df] opacity-70 hover:opacity-100",
+                                        )}>
+                                        <img
+                                            src={imgUrl}
+                                            alt={`${product.title} view ${i + 1}`}
+                                            className='w-full h-full object-cover'
+                                        />
+                                    </button>
+                                ))}
+                            </div>
+                        )}
+
+                        <div
+                            className={clsx(
+                                "group relative w-full md:flex-1 md:min-w-0 max-w-[620px] aspect-square bg-[#f5f0e8] rounded-[2px] overflow-hidden border border-[#e8e4df]/60 select-none",
+                                "cursor-zoom-in",
+                            )}
+                            role='button'
+                            tabIndex={0}
+                            aria-label='Open product image viewer'
+                            onClick={() => setIsImageZoomed(true)}
+                            onKeyDown={(event) => {
+                                if (event.key === "Enter" || event.key === " ") {
+                                    event.preventDefault();
+                                    setIsImageZoomed(true);
+                                }
+                            }}>
+                            <img
+                                src={
+                                    images[selectedImageIndex] ||
+                                    product.featuredImage?.url
+                                }
+                                alt={product.title}
+                                draggable={false}
+                                className='w-full h-full object-contain object-center'
+                            />
+                            <div className='absolute bottom-4 right-4 z-10 flex items-center gap-2 rounded-full bg-white/90 px-3 py-2 text-xs font-semibold text-[#3f3027] shadow-sm backdrop-blur-sm pointer-events-none'>
+                                <ZoomIn size={16} />
+                                <span className='hidden sm:inline'>
+                                    Click to zoom
+                                </span>
+                            </div>
+                            {isOnSale && (
+                                <div className='absolute top-4 left-4 z-10'>
+                                    <Badge variant='sale'>Sale</Badge>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+
+                    {activeProductTab === "description" && detailImages.length > 0 ? (
+                        <div className='md:ml-[96px] grid max-w-[620px] grid-cols-2 gap-3'>
+                            {detailImages.map((imageUrl, index) => (
                                 <button
-                                    key={i}
-                                    onClick={() => {
-                                        setSelectedImageIndex(i);
-                                        setIsImageZoomed(false);
-                                    }}
-                                    className={clsx(
-                                        "w-16 h-16 sm:w-20 sm:h-20 rounded-[2px] overflow-hidden border transition-all shrink-0 cursor-pointer bg-[#f5f0e8]",
-                                        selectedImageIndex === i
-                                            ? "border-[#c4622d] ring-1 ring-[#c4622d]"
-                                            : "border-[#e8e4df] opacity-70 hover:opacity-100",
-                                    )}>
+                                    type='button'
+                                    key={`${imageUrl}-${index}`}
+                                    onClick={() => openZoomForImage(imageUrl)}
+                                    className='group relative overflow-hidden rounded-[4px] border border-[#e8e4df] bg-[#f5f0e8] cursor-zoom-in'>
                                     <img
-                                        src={imgUrl}
-                                        alt={`${product.title} view ${i + 1}`}
-                                        className='w-full h-full object-cover'
+                                        src={imageUrl}
+                                        alt={`${product.title} detail ${index + 1}`}
+                                        className='aspect-[4/3] h-full w-full object-cover'
+                                        loading='lazy'
                                     />
+                                    <div className='absolute bottom-3 right-3 z-10 flex items-center gap-1.5 rounded-full bg-white/90 px-2.5 py-1.5 text-[11px] font-semibold text-[#3f3027] shadow-sm backdrop-blur-sm pointer-events-none'>
+                                        <ZoomIn size={14} />
+                                        <span className='hidden sm:inline'>
+                                            Click to zoom
+                                        </span>
+                                    </div>
                                 </button>
                             ))}
                         </div>
-                    )}
-
-                    <div
-                        className={clsx(
-                            "group relative w-full md:flex-1 md:min-w-0 max-w-[620px] aspect-square bg-[#f5f0e8] rounded-[2px] overflow-hidden border border-[#e8e4df]/60 select-none",
-                            "cursor-zoom-in",
-                        )}
-                        role='button'
-                        tabIndex={0}
-                        aria-label='Open product image viewer'
-                        onClick={() => setIsImageZoomed(true)}
-                        onKeyDown={(event) => {
-                            if (event.key === "Enter" || event.key === " ") {
-                                event.preventDefault();
-                                setIsImageZoomed(true);
-                            }
-                        }}>
-                        <img
-                            src={
-                                images[selectedImageIndex] ||
-                                product.featuredImage?.url
-                            }
-                            alt={product.title}
-                            draggable={false}
-                            className='w-full h-full object-contain object-center'
-                        />
-                        <div className='absolute bottom-4 right-4 z-10 flex items-center gap-2 rounded-full bg-white/90 px-3 py-2 text-xs font-semibold text-[#3f3027] shadow-sm backdrop-blur-sm pointer-events-none'>
-                            <ZoomIn size={16} />
-                            <span className='hidden sm:inline'>
-                                Click to zoom
-                            </span>
-                        </div>
-                        {isOnSale && (
-                            <div className='absolute top-4 left-4 z-10'>
-                                <Badge variant='sale'>Sale</Badge>
-                            </div>
-                        )}
-                    </div>
+                    ) : null}
                 </div>
 
                 {/* Purchase details */}
@@ -433,7 +471,7 @@ export default function ProductDetailRoute() {
                             {product.title}
                         </h1>
                         {product.dimensions?.value ? (
-                            <p className='mt-2 truncate text-sm text-[#686764]' title={product.dimensions.value}>
+                            <p className='mt-3 rounded-[6px] border border-[#d8c8b8] bg-[#fffaf4] px-4 py-3 text-base leading-relaxed text-[#686764]' title={product.dimensions.value}>
                                 <span className='font-semibold text-[#3f3027]'>Dimensions:</span>{" "}
                                 {product.dimensions.value}
                             </p>
@@ -631,6 +669,7 @@ export default function ProductDetailRoute() {
                     <Accordion
                         items={accordionTabs}
                         variant='tabs'
+                        onOpenChange={(openIds) => setActiveProductTab(openIds[0])}
                     />
 
                     {/* Trust Guarantees */}

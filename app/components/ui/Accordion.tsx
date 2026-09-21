@@ -14,6 +14,7 @@ export interface AccordionProps {
   allowMultiple?: boolean;
   variant?: 'stacked' | 'tabs';
   className?: string;
+  onOpenChange?: (openIds: string[]) => void;
 }
 
 export const Accordion: React.FC<AccordionProps> = ({
@@ -22,17 +23,18 @@ export const Accordion: React.FC<AccordionProps> = ({
   allowMultiple = false,
   variant = 'stacked',
   className = '',
+  onOpenChange,
 }) => {
   const [openIds, setOpenIds] = useState<string[]>(defaultOpenId ? [defaultOpenId] : []);
 
   const toggle = (id: string) => {
-    if (allowMultiple) {
-      setOpenIds((prev) =>
-        prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id],
-      );
-    } else {
-      setOpenIds((prev) => (prev.includes(id) ? [] : [id]));
-    }
+    setOpenIds((prev) => {
+      const next = allowMultiple
+        ? prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]
+        : prev.includes(id) ? [] : [id];
+      onOpenChange?.(next);
+      return next;
+    });
   };
 
   if (variant === 'tabs') {
@@ -56,7 +58,11 @@ export const Accordion: React.FC<AccordionProps> = ({
                 id={`tab-${item.id}`}
                 aria-controls={`panel-${item.id}`}
                 aria-selected={isActive}
-                onClick={() => setOpenIds((current) => current[0] === item.id ? [] : [item.id])}
+                onClick={() => setOpenIds((current) => {
+                  const next = current[0] === item.id ? [] : [item.id];
+                  onOpenChange?.(next);
+                  return next;
+                })}
                 className={clsx(
                   'relative shrink-0 px-4 py-3 text-xs font-semibold whitespace-nowrap transition-colors cursor-pointer',
                   isActive ? 'text-[#c4622d]' : 'text-[#686764] hover:text-[#060505]',
