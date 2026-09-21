@@ -310,3 +310,21 @@ export const STOREFRONT_CUSTOMER_QUERY = `#graphql
   }
 ` as const;
 
+export const INVENTORY_BATCH_QUERY = `#graphql
+  query InventoryBatch($ids: [ID!]!) {
+    nodes(ids: $ids) {
+      ... on ProductVariant {
+        id
+        availableForSale
+        currentlyNotInStock
+        quantityAvailable
+        quantityRule {
+          minimum
+          maximum
+          increment
+        }
+      }
+    }
+  }
+` as const;
+

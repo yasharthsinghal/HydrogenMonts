@@ -64,7 +64,7 @@ export const Accordion: React.FC<AccordionProps> = ({
                   return next;
                 })}
                 className={clsx(
-                  'relative shrink-0 px-4 py-3 text-xs font-semibold whitespace-nowrap transition-colors cursor-pointer',
+                  'relative shrink-0 px-3.5 py-2.5 text-xs font-semibold whitespace-nowrap transition-colors cursor-pointer',
                   isActive ? 'text-[#c4622d]' : 'text-[#686764] hover:text-[#060505]',
                 )}
               >
@@ -79,8 +79,8 @@ export const Accordion: React.FC<AccordionProps> = ({
             id={`panel-${activeItem.id}`}
             role="tabpanel"
             aria-labelledby={`tab-${activeItem.id}`}
-            className="px-4 py-4 text-sm text-[#686764]"
-            style={{ fontSize: '0.875rem', lineHeight: 1.65 }}
+            className="px-2 py-3 text-xs sm:text-sm text-[#686764]"
+            style={{ lineHeight: 1.5 }}
           >
             {activeItem.content}
           </div>
@@ -94,10 +94,10 @@ export const Accordion: React.FC<AccordionProps> = ({
       {items.map((item) => {
         const isOpen = openIds.includes(item.id);
         return (
-          <div key={item.id} className="py-1">
+          <div key={item.id} className="py-0.5">
             <button
               onClick={() => toggle(item.id)}
-              className="w-full flex items-center justify-between py-4 text-left font-medium text-sm text-[#060505] hover:text-[#c4622d] transition-colors cursor-pointer"
+              className="w-full flex items-center justify-between py-2.5 text-left font-medium text-xs sm:text-sm text-[#060505] hover:text-[#c4622d] transition-colors cursor-pointer"
               aria-expanded={isOpen}
             >
               <span>{item.title}</span>
@@ -110,8 +110,8 @@ export const Accordion: React.FC<AccordionProps> = ({
             </button>
             {isOpen && (
               <div
-                className="pb-4 text-sm text-[#686764] leading-relaxed"
-                style={{ fontFamily: "'DM Sans', sans-serif", fontSize: '0.875rem', lineHeight: 1.65 }}
+                className="pb-3 text-xs sm:text-sm text-[#686764] leading-normal"
+                style={{ fontFamily: "'DM Sans', sans-serif", lineHeight: 1.5 }}
               >
                 {item.content}
               </div>

@@ -28,6 +28,7 @@ import {
 } from "lucide-react";
 import { clsx } from "clsx";
 import { getCartLines, normalizeCartForOptimistic } from "~/utils/cart";
+import { formatProductDescriptionHtml } from "~/utils/productDescription";
 
 export const meta: MetaFunction<typeof loader> = ({ data }) => {
     if (!data?.product) {
@@ -113,7 +114,7 @@ export default function ProductDetailRoute() {
     const [quantity, setQuantity] = useState(1);
     const [addingToCart, setAddingToCart] = useState(false);
     const [isBuyingNow, setIsBuyingNow] = useState(false);
-    const [activeProductTab, setActiveProductTab] = useState<string | undefined>();
+    const [activeProductTab, setActiveProductTab] = useState<string | undefined>("description");
 
     const cartFetcher = useFetcher<{ cart?: { checkoutUrl?: string; id?: string; totalQuantity?: number }; error?: string }>();
     const isSubmitting = cartFetcher.state !== "idle";
@@ -314,17 +315,21 @@ export default function ProductDetailRoute() {
         },
     };
 
+    const formattedDescription = formatProductDescriptionHtml(
+        product.descriptionHtml ||
+            product.description ||
+            "<p>Meticulously handcrafted in limited artisanal batches using premium natural fibers.</p>",
+    );
+
     const accordionTabs = [
         {
             id: "description",
             title: "Artisanal Craft & Details",
             content: (
                 <div
+                    className='pdp-description-content'
                     dangerouslySetInnerHTML={{
-                        __html:
-                            product.descriptionHtml ||
-                            product.description ||
-                            "<p>Meticulously handcrafted in limited artisanal batches using premium natural fibers.</p>",
+                        __html: formattedDescription,
                     }}
                 />
             ),
@@ -333,7 +338,7 @@ export default function ProductDetailRoute() {
             id: "care",
             title: "Materials & Care Guide",
             content: (
-                <p>
+                <p className='text-xs sm:text-[13px] leading-relaxed text-[#55483f]'>
                     100% premium long-staple cotton / linen. Dry clean
                     recommended for first wash or gentle cold hand wash with
                     pH-neutral detergent. Line dry in shade to maintain textile
@@ -344,7 +349,7 @@ export default function ProductDetailRoute() {
     ];
 
     return (
-        <div className='max-w-[1400px] mx-auto px-6 md:px-12 pt-5 pb-28 md:pb-16'>
+        <div className='max-w-[1400px] mx-auto px-4 sm:px-6 md:px-12 pt-3 pb-24 md:pb-14'>
             {/* Product JSON-LD */}
             <script
                 type='application/ld+json'
@@ -358,11 +363,11 @@ export default function ProductDetailRoute() {
                     { label: "Shop", href: "/collections/all" },
                     { label: product.title },
                 ]}
-                className='mb-4'
+                className='mb-3'
             />
 
             {/* ─── MAIN PDP GRID ─── */}
-            <div className='grid grid-cols-1 lg:grid-cols-12 items-start gap-8 lg:gap-8 pb-6 border-b border-[#e8e4df]'>
+            <div className='grid grid-cols-1 lg:grid-cols-12 items-start gap-6 lg:gap-8 pb-5 border-b border-[#e8e4df]'>
                 {/* Compact square media gallery */}
                 <div className='lg:col-span-7 flex w-full max-w-[720px] flex-col gap-4'>
                     <div className='flex flex-col-reverse md:flex-row items-start gap-4'>
@@ -457,33 +462,33 @@ export default function ProductDetailRoute() {
 
                 {/* Purchase details */}
                 <div
-                    className='lg:col-span-5 self-stretch flex flex-col gap-4 min-w-0'
+                    className='lg:col-span-5 self-stretch flex flex-col gap-3.5 min-w-0'
                     style={{ fontFamily: "'DM Sans', sans-serif" }}>
                     <div>
                         {product.vendor && (
-                            <span className='text-xs uppercase tracking-[0.2em] font-semibold text-[#8b7355] block mb-1.5'>
+                            <span className='text-[11px] uppercase tracking-[0.2em] font-semibold text-[#8b7355] block mb-1'>
                                 {product.vendor}
                             </span>
                         )}
                         <h1
-                            className='text-xl sm:text-2xl md:text-3xl font-bold text-[#060505] leading-tight'
+                            className='text-xl sm:text-2xl font-bold text-[#060505] leading-snug'
                             style={{ fontFamily: "'Playfair Display', serif" }}>
                             {product.title}
                         </h1>
                         {product.dimensions?.value ? (
-                            <p className='mt-3 rounded-[6px] border border-[#d8c8b8] bg-[#fffaf4] px-4 py-3 text-base leading-relaxed text-[#686764]' title={product.dimensions.value}>
+                            <p className='mt-2 rounded-[4px] border border-[#d8c8b8]/80 bg-[#fffaf4] px-3 py-1.5 text-xs text-[#686764]' title={product.dimensions.value}>
                                 <span className='font-semibold text-[#3f3027]'>Dimensions:</span>{" "}
                                 {product.dimensions.value}
                             </p>
                         ) : null}
 
                         {/* Price Header */}
-                        <div className='flex items-center gap-3 mt-2'>
+                        <div className='flex items-center gap-3 mt-1.5'>
                             <span className='text-xl font-bold text-[#2c2c2c]'>
                                 {formatPrice(price.amount, price.currencyCode)}
                             </span>
                             {isOnSale && compareAtPrice && (
-                                <span className='text-base line-through text-[#686764]'>
+                                <span className='text-sm line-through text-[#686764]'>
                                     {formatPrice(
                                         compareAtPrice.amount,
                                         compareAtPrice.currencyCode,
@@ -491,14 +496,14 @@ export default function ProductDetailRoute() {
                                 </span>
                             )}
                         </div>
-                        <span className='text-xs text-[#686764] block mt-1'>
+                        <span className='text-[11px] text-[#686764] block mt-0.5'>
                             Taxes included. Handcrafted in limited batches.
                         </span>
 
                         {/* Prepaid 15% Instant Savings Callout */}
-                        <div className='mt-2 px-3 py-2 bg-[#faf8f5] border border-[#c4622d]/30 rounded-[6px] flex items-center justify-between gap-3'>
-                            <div className='flex items-center gap-2.5'>
-                                <span className='flex items-center justify-center w-6 h-6 rounded-full bg-[#c4622d] text-white text-[11px] font-bold shrink-0'>
+                        <div className='mt-2 px-3 py-2 bg-[#faf8f5] border border-[#c4622d]/30 rounded-[4px] flex items-center justify-between gap-2.5'>
+                            <div className='flex items-center gap-2'>
+                                <span className='flex items-center justify-center w-5 h-5 rounded-full bg-[#c4622d] text-white text-[10px] font-bold shrink-0'>
                                     %
                                 </span>
                                 <div className='flex flex-col'>
@@ -520,18 +525,18 @@ export default function ProductDetailRoute() {
                     {product.options &&
                         product.options.length > 0 &&
                         product.options[0].values.length > 1 && (
-                            <div className='flex flex-col gap-4 pt-2 border-t border-[#e8e4df]'>
+                            <div className='flex flex-col gap-2.5 pt-2 border-t border-[#e8e4df]'>
                                 {product.options.map((option) => (
                                     <div
                                         key={option.name}
-                                        className='flex flex-col gap-2'>
+                                        className='flex flex-col gap-1.5'>
                                         <span className='text-xs font-semibold text-[#060505]'>
                                             {option.name}:{" "}
                                             <span className='font-normal text-[#686764]'>
                                                 {selectedVariant?.title}
                                             </span>
                                         </span>
-                                        <div className='flex flex-wrap gap-2'>
+                                        <div className='flex flex-wrap gap-1.5'>
                                             {variants.map((v) => {
                                                 const isSelected =
                                                     v.id ===
@@ -547,7 +552,7 @@ export default function ProductDetailRoute() {
                                                             !v.availableForSale
                                                         }
                                                         className={clsx(
-                                                            "px-4 py-2 text-xs font-medium rounded-[4px] border transition-all cursor-pointer",
+                                                            "px-3 py-1.5 text-xs font-medium rounded-[4px] border transition-all cursor-pointer",
                                                             isSelected
                                                                 ? "border-[#c4622d] bg-[#c4622d] text-white"
                                                                 : "border-[#e8e4df] bg-[#faf8f5] text-[#2c2c2c] hover:border-[#c4622d]",
@@ -669,31 +674,32 @@ export default function ProductDetailRoute() {
                     <Accordion
                         items={accordionTabs}
                         variant='tabs'
+                        defaultOpenId='description'
                         onOpenChange={(openIds) => setActiveProductTab(openIds[0])}
                     />
 
                     {/* Trust Guarantees */}
-                    <div className='grid grid-cols-3 gap-2 py-4 border-y border-[#e8e4df] text-center text-[11px] text-[#686764]'>
-                        <div className='flex flex-col items-center gap-1'>
+                    <div className='grid grid-cols-3 gap-2 py-2.5 border-y border-[#e8e4df] text-center text-[11px] text-[#686764]'>
+                        <div className='flex flex-col items-center gap-0.5'>
                             <ShieldCheck className='w-4 h-4 text-[#8b7355]' />
                             <span>Authentic Craft</span>
                         </div>
-                        <div className='flex flex-col items-center gap-1'>
+                        <div className='flex flex-col items-center gap-0.5'>
                             <Truck className='w-4 h-4 text-[#8b7355]' />
                             <span>Fast Dispatch</span>
                         </div>
-                        <div className='flex flex-col items-center gap-1'>
+                        <div className='flex flex-col items-center gap-0.5'>
                             <RotateCcw className='w-4 h-4 text-[#8b7355]' />
                             <span>30-Day Returns</span>
                         </div>
                     </div>
 
                     {/* Always-visible shipping information */}
-                    <section className='border-b border-[#e8e4df] pb-3 text-xs leading-relaxed text-[#686764] lg:mt-auto'>
-                        <h2 className='mb-2 text-sm font-semibold text-[#060505]'>
+                    <section className='border-b border-[#e8e4df] pb-2.5 text-[11px] leading-relaxed text-[#686764] lg:mt-auto'>
+                        <h2 className='mb-1.5 text-xs font-semibold uppercase tracking-wider text-[#060505]'>
                             Shipping & Global Delivery Policy
                         </h2>
-                        <div className='grid gap-1.5'>
+                        <div className='grid gap-1'>
                             <p><strong className='text-[#3f3027]'>India:</strong> Free shipping on prepaid and COD orders. Dispatch within 24–48 hours.</p>
                             <p><strong className='text-[#3f3027]'>Worldwide:</strong> Express delivery charged at actuals based on weight and destination.</p>
                             <p><strong className='text-[#3f3027]'>Prepaid:</strong> Extra 15% discount applied at checkout.</p>
