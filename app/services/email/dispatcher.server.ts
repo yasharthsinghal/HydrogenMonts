@@ -25,9 +25,10 @@ export async function dispatchOtpEmail(
       return smtpResult;
     }
     console.warn(`[Email Dispatcher] Gmail SMTP attempt notice: ${smtpResult.error}`);
+    return smtpResult;
   }
 
-  // 2. Fallback / Dev Mode Logger (ensures local development works seamlessly even if SMTP credentials are being configured)
+  // Log OTPs only when the development console provider was explicitly selected.
   console.info(`\n======================================================`);
   console.info(`🔐 [MONTS OTP DISPATCH — Development Mode]`);
   console.info(`📧 Target: ${options.to}`);
@@ -54,6 +55,7 @@ export async function dispatchOrderConfirmationEmail(
     const smtpResult = await smtpProvider.sendOrderConfirmation(options, env);
     if (smtpResult.success) return smtpResult;
     console.warn(`[Email Dispatcher - Order Confirmation] SMTP notice: ${smtpResult.error}`);
+    return smtpResult;
   }
 
   console.info(`\n======================================================`);
@@ -82,6 +84,7 @@ export async function dispatchContactInquiryEmail(
     const smtpResult = await smtpProvider.sendContactInquiry(options, env);
     if (smtpResult.success) return smtpResult;
     console.warn(`[Email Dispatcher - Contact Inquiry] SMTP notice: ${smtpResult.error}`);
+    return smtpResult;
   }
 
   console.info(`\n======================================================`);

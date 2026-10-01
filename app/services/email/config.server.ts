@@ -1,11 +1,17 @@
 export type EmailProviderMode = 'smtp' | 'google_oauth2' | 'console_dev';
 
 export function getEmailProviderMode(env: Env): EmailProviderMode {
-  if (env.OTP_EMAIL_PROVIDER === 'google_oauth2') {
+  const configuredProvider = env.OTP_EMAIL_PROVIDER?.trim().toLowerCase();
+
+  if (
+    configuredProvider === 'google_oauth2' ||
+    configuredProvider === 'googleoauth' ||
+    configuredProvider === 'google_oauth'
+  ) {
     return 'google_oauth2';
   }
 
-  if (env.OTP_EMAIL_PROVIDER === 'console_dev') {
+  if (configuredProvider === 'console_dev') {
     return 'console_dev';
   }
 
