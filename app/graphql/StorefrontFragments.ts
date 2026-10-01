@@ -154,3 +154,5 @@ export const PRODUCT_DETAIL_FRAGMENT = `#graphql
     }
   }
 ` as const;
+
+export { INVENTORY_BATCH_QUERY } from './StorefrontQueries';
