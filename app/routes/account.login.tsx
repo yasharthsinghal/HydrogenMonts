@@ -135,7 +135,7 @@ export async function action({ request, context }: ActionFunctionArgs) {
       {
         step: 'verify',
         email,
-        successMessage: `A 6-digit verification code has been sent to ${email}. Check your inbox.`,
+        successMessage: `A 6-digit verification code has been sent to ${email}. Please check your inbox (and spam/junk folder).`,
       },
       { headers: { 'Set-Cookie': await session.commit() } },
     );
@@ -273,7 +273,7 @@ export default function LoginPage() {
             <p className="text-xs text-[#686764] leading-relaxed">
               {step === 'email'
                 ? 'Enter your email — we will send a 6-digit code to your inbox.'
-                : `We sent a code to ${email}. Enter it below to continue.`}
+                : `We sent a code to ${email}. Please check your inbox (and Spam/Junk folder if not visible).`}
             </p>
           </div>
 

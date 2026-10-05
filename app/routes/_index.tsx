@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react';
 import { useLoaderData, Link, type MetaFunction, type LoaderFunctionArgs } from 'react-router';
 import { HOMEPAGE_QUERY } from '~/graphql/StorefrontQueries';
 import type { ProductCardItem, CollectionCardItem } from '~/types/storefront.types';
@@ -7,19 +8,22 @@ import {
   Sparkles,
   ArrowRight,
   ChevronRight,
+  ChevronLeft,
   RotateCcw,
   Globe,
   Headphones,
   Truck,
+  Layers,
+  ShoppingBag,
 } from 'lucide-react';
 
 export const meta: MetaFunction = () => {
   return [
-    { title: 'MONTS | Artisanal Handcrafted Ready-to-Wear & Bags' },
+    { title: 'MONTS | Artisanal Handcrafted Ready-to-Wear & Bags (Vastra by Monty)' },
     {
       name: 'description',
       content:
-        'Explore artisanal craftsmanship, handcrafted cotton totes, and minimalist silhouettes on MONTS.',
+        'Explore artisanal block prints, handcrafted cotton apparel, quilted totes, and minimalist silhouettes on MONTS (formerly Vastra by Monty).',
     },
     { property: 'og:title', content: 'MONTS | Artisanal Handcrafted Storefront' },
     { property: 'og:type', content: 'website' },
@@ -44,7 +48,7 @@ export async function loader({ request, context }: LoaderFunctionArgs) {
   try {
     const response = await storefront.query(HOMEPAGE_QUERY, {
       variables: {
-        collectionsFirst: 3,
+        collectionsFirst: 6,
         featuredProductsFirst: 8,
         allProductsFirst: 250,
       },
@@ -80,9 +84,115 @@ export default function IndexRoute() {
     ...collections.map((collection) => getImageUrl(collection.image)),
   ].filter(Boolean) as string[];
 
-  const heroImage = catalogImages[0];
-  const newArrivalsImage = getImageUrl(allProducts[0]?.featuredImage) || catalogImages[1] || heroImage;
-  const craftImage = getImageUrl(collections[0]?.image) || catalogImages[2] || heroImage;
+  const heroImage1 = catalogImages[0] || 'https://cdn.shopify.com/s/files/1/0533/2089/files/placeholder-images-lifestyle-1.jpg';
+  const heroImage2 = catalogImages[1] || heroImage1;
+  const heroImage3 = catalogImages[2] || heroImage1;
+  const newArrivalsImage = getImageUrl(allProducts[0]?.featuredImage) || catalogImages[1] || heroImage1;
+  const craftImage = getImageUrl(collections[0]?.image) || catalogImages[2] || heroImage1;
+
+  // Hero Slider Banners definition for Vastra by Monty / MONTS
+  const heroBanners = [
+    {
+      badge: 'Vastra by Monty is now MONTS',
+      title: 'Timeless Luxury, Handcrafted Silhouettes',
+      subtitle: 'Artisanal Rajasthan block prints & premium long-staple cotton apparel crafted for contemporary luxury.',
+      ctaText: 'Shop All Products',
+      ctaLink: '/collections/all',
+      secondaryText: 'Explore Categories',
+      secondaryLink: '#categories',
+      image: heroImage1,
+    },
+    {
+      badge: 'Signature Handcrafted Bags',
+      title: 'Quilted Cotton Totes & Pouch Sets',
+      subtitle: 'Block-printed canvas totes, multi-utility pouch sets, and everyday travel essentials made with care.',
+      ctaText: 'Shop Bags & Totes',
+      ctaLink: '/collections/monts-bags',
+      secondaryText: 'View Collections',
+      secondaryLink: '/collections',
+      image: heroImage2,
+    },
+    {
+      badge: 'Limited Artisanal Batches',
+      title: 'Modern Minimalist Apparel & Accessories',
+      subtitle: 'Discover handcrafted kurtas, casual shirts, heavyweight hoodies, and refined everyday essentials.',
+      ctaText: 'Explore New Arrivals',
+      ctaLink: '/collections/all',
+      secondaryText: 'Wholesale Orders',
+      secondaryLink: '/wholesale',
+      image: heroImage3,
+    },
+  ];
+
+  const [currentSlide, setCurrentSlide] = useState(0);
+
+  // Hero Carousel Autoplay
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentSlide((prev) => (prev + 1) % heroBanners.length);
+    }, 6000);
+    return () => clearInterval(timer);
+  }, [heroBanners.length]);
+
+  const handlePrevSlide = () => {
+    setCurrentSlide((prev) => (prev === 0 ? heroBanners.length - 1 : prev - 1));
+  };
+
+  const handleNextSlide = () => {
+    setCurrentSlide((prev) => (prev + 1) % heroBanners.length);
+  };
+
+  // Main Categories List for "Shop By Category" section
+  const mainCategories = [
+    {
+      title: 'Shirts & Kurtas',
+      handle: 'monts-shirts',
+      href: '/collections/monts-shirts',
+      subtitle: 'Artisanal block prints & pure cotton',
+      badge: 'Apparel',
+      image: getImageUrl(allProducts.find((p) => p.title.toLowerCase().includes('shirt'))?.featuredImage) || catalogImages[0],
+    },
+    {
+      title: 'T-Shirts & Tops',
+      handle: 'monts-t-shirts',
+      href: '/collections/monts-t-shirts',
+      subtitle: 'Everyday, oversized & graphic luxury tees',
+      badge: 'Apparel',
+      image: getImageUrl(allProducts.find((p) => p.title.toLowerCase().includes('tee') || p.title.toLowerCase().includes('t-shirt'))?.featuredImage) || catalogImages[1],
+    },
+    {
+      title: 'Hoodies & Sweatshirts',
+      handle: 'monts-hoodies',
+      href: '/collections/monts-hoodies',
+      subtitle: 'Heavyweight cotton minimal hoodies',
+      badge: 'Apparel',
+      image: getImageUrl(allProducts.find((p) => p.title.toLowerCase().includes('hoodie'))?.featuredImage) || catalogImages[2],
+    },
+    {
+      title: 'Pants & Joggers',
+      handle: 'monts-pants-and-joggers',
+      href: '/collections/monts-pants-and-joggers',
+      subtitle: 'Tailored everyday bottom wear',
+      badge: 'Apparel',
+      image: getImageUrl(allProducts.find((p) => p.title.toLowerCase().includes('pant') || p.title.toLowerCase().includes('jogger'))?.featuredImage) || catalogImages[3],
+    },
+    {
+      title: 'Handcrafted Bags & Totes',
+      handle: 'monts-bags',
+      href: '/collections/monts-bags',
+      subtitle: 'Block-printed canvas totes & pouch sets',
+      badge: 'Accessories',
+      image: getImageUrl(allProducts.find((p) => p.title.toLowerCase().includes('tote') || p.title.toLowerCase().includes('bag') || p.title.toLowerCase().includes('pouch'))?.featuredImage) || catalogImages[4],
+    },
+    {
+      title: 'Accessories & Pouches',
+      handle: 'monts-accessories',
+      href: '/collections/monts-accessories',
+      subtitle: 'Caps, belts, travel pouches & scarves',
+      badge: 'Accessories',
+      image: getImageUrl(allProducts.find((p) => p.title.toLowerCase().includes('cap') || p.title.toLowerCase().includes('accessory'))?.featuredImage) || catalogImages[5],
+    },
+  ];
 
   const schemaJsonLd = {
     '@context': 'https://schema.org',
@@ -123,65 +233,196 @@ export default function IndexRoute() {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(schemaJsonLd) }}
       />
 
-      {/* ─── 1. HERO BANNER ─── */}
-      <section
-        className="relative w-full overflow-hidden flex items-center justify-center"
-        style={{ minHeight: '85vh' }}
-      >
-        <div className="absolute inset-0 z-0">
-          {heroImage && (
-            <img
-              src={heroImage}
-              alt="MONTS Luxury Collection"
-              className="w-full h-full object-cover"
-              style={{ objectPosition: 'center 30%' }}
-              onError={hideBrokenImage}
-            />
-          )}
+      {/* ─── 1. HERO BANNERS CAROUSEL ─── */}
+      <section className="relative w-full overflow-hidden bg-[#060505]" style={{ minHeight: '82vh' }}>
+        {heroBanners.map((banner, index) => (
           <div
-            className="absolute inset-0"
-            style={{
-              background:
-                'linear-gradient(to bottom, rgba(6,5,5,0.15) 0%, rgba(6,5,5,0.55) 60%, rgba(6,5,5,0.85) 100%)',
-            }}
-          />
-        </div>
+            key={banner.title + index}
+            className={`absolute inset-0 transition-opacity duration-1000 ease-in-out flex items-center justify-center ${
+              index === currentSlide ? 'opacity-100 pointer-events-auto z-10' : 'opacity-0 pointer-events-none z-0'
+            }`}
+          >
+            {/* Slide Background Image */}
+            <div className="absolute inset-0">
+              {banner.image && (
+                <img
+                  src={banner.image}
+                  alt={banner.title}
+                  className="w-full h-full object-cover transform scale-105 transition-transform duration-10000"
+                  style={{ objectPosition: 'center 30%' }}
+                  onError={hideBrokenImage}
+                />
+              )}
+              <div
+                className="absolute inset-0"
+                style={{
+                  background:
+                    'linear-gradient(to bottom, rgba(6,5,5,0.2) 0%, rgba(6,5,5,0.65) 60%, rgba(6,5,5,0.9) 100%)',
+                }}
+              />
+            </div>
 
-        <div className="relative z-10 text-center px-6 max-w-3xl mx-auto flex flex-col items-center gap-6">
-          <span
-            className="text-xs uppercase tracking-[0.35em] font-medium flex items-center gap-2 text-[#e8dfd5]"
-            style={{ fontFamily: "'DM Sans', sans-serif" }}
-          >
-            <Sparkles className="w-3.5 h-3.5" />
-            Ready-to-Wear Collection
-          </span>
-          <h1
-            className="text-4xl sm:text-6xl lg:text-7xl font-bold leading-tight text-white"
-            style={{ fontFamily: "'Playfair Display', serif" }}
-          >
-            Timeless Luxury,<br />Handcrafted Silhouettes
-          </h1>
-          <p
-            className="text-base sm:text-lg font-light max-w-xl text-white/80"
-            style={{ fontFamily: "'Cormorant', serif", fontSize: '1.25rem' }}
-          >
-            Explore artisanal craftsmanship and minimalist designs built with premium long-staple fabrics.
-          </p>
-          <div className="flex flex-wrap items-center justify-center gap-4 pt-2">
+            {/* Slide Banner Content */}
+            <div className="relative z-10 text-center px-6 max-w-3xl mx-auto flex flex-col items-center gap-6">
+              <span
+                className="text-xs uppercase tracking-[0.35em] font-semibold flex items-center gap-2 text-[#e8dfd5] bg-[#060505]/40 backdrop-blur-md px-4 py-1.5 rounded-full border border-white/15"
+                style={{ fontFamily: "'DM Sans', sans-serif" }}
+              >
+                <Sparkles className="w-3.5 h-3.5 text-[#c4622d]" />
+                {banner.badge}
+              </span>
+              <h1
+                className="text-3xl sm:text-5xl lg:text-7xl font-bold leading-tight text-white drop-shadow-sm"
+                style={{ fontFamily: "'Playfair Display', serif" }}
+              >
+                {banner.title}
+              </h1>
+              <p
+                className="text-base sm:text-xl font-light max-w-xl text-white/90 leading-relaxed"
+                style={{ fontFamily: "'Cormorant', serif" }}
+              >
+                {banner.subtitle}
+              </p>
+              <div className="flex flex-wrap items-center justify-center gap-4 pt-2">
+                <Link
+                  to={banner.ctaLink}
+                  className="inline-flex items-center justify-center px-8 py-3.5 text-sm font-semibold rounded-[6px] transition-all bg-[#c4622d] text-white hover:bg-[#923f12] active:scale-95 cursor-pointer shadow-lg"
+                  style={{ fontFamily: "'DM Sans', sans-serif" }}
+                >
+                  {banner.ctaText}
+                </Link>
+                <a
+                  href={banner.secondaryLink}
+                  className="inline-flex items-center justify-center px-8 py-3.5 text-sm font-semibold rounded-[6px] transition-all text-white border border-white/40 bg-white/10 hover:bg-white/20 backdrop-blur-xs active:scale-95 cursor-pointer"
+                  style={{ fontFamily: "'DM Sans', sans-serif" }}
+                >
+                  {banner.secondaryText}
+                </a>
+              </div>
+            </div>
+          </div>
+        ))}
+
+        {/* Carousel Prev/Next Navigation Controls */}
+        <button
+          type="button"
+          onClick={handlePrevSlide}
+          className="absolute left-4 md:left-8 top-1/2 -translate-y-1/2 z-20 w-11 h-11 rounded-full bg-[#060505]/40 hover:bg-[#c4622d] text-white border border-white/20 flex items-center justify-center transition-all cursor-pointer backdrop-blur-xs"
+          aria-label="Previous banner slide"
+        >
+          <ChevronLeft className="w-6 h-6" />
+        </button>
+
+        <button
+          type="button"
+          onClick={handleNextSlide}
+          className="absolute right-4 md:right-8 top-1/2 -translate-y-1/2 z-20 w-11 h-11 rounded-full bg-[#060505]/40 hover:bg-[#c4622d] text-white border border-white/20 flex items-center justify-center transition-all cursor-pointer backdrop-blur-xs"
+          aria-label="Next banner slide"
+        >
+          <ChevronRight className="w-6 h-6" />
+        </button>
+
+        {/* Carousel Indicator Dots */}
+        <div className="absolute bottom-6 inset-x-0 z-20 flex items-center justify-center gap-2.5">
+          {heroBanners.map((_, idx) => (
+            <button
+              key={idx}
+              type="button"
+              onClick={() => setCurrentSlide(idx)}
+              className={`transition-all duration-300 rounded-full cursor-pointer ${
+                idx === currentSlide
+                  ? 'w-8 h-2 bg-[#c4622d]'
+                  : 'w-2 h-2 bg-white/50 hover:bg-white/80'
+              }`}
+              aria-label={`Go to slide ${idx + 1}`}
+            />
+          ))}
+        </div>
+      </section>
+
+      {/* ─── 2. SHOP BY CATEGORY SECTION ("later categories") ─── */}
+      <section id="categories" className="py-16 md:py-24 bg-[#faf8f5] scroll-mt-20">
+        <div className="max-w-[1400px] mx-auto px-6 md:px-12">
+          <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-12 pb-4 border-b border-[#e8e4df] gap-4">
+            <div>
+              <span
+                className="text-xs uppercase tracking-[0.25em] font-semibold block mb-1 text-[#8b7355]"
+                style={{ fontFamily: "'DM Sans', sans-serif" }}
+              >
+                Vastra by Monty Catalog
+              </span>
+              <h2
+                className="text-3xl md:text-4xl font-bold text-[#060505]"
+                style={{ fontFamily: "'Playfair Display', serif" }}
+              >
+                Shop By Category
+              </h2>
+              <p
+                className="text-sm mt-1 text-[#686764]"
+                style={{ fontFamily: "'Cormorant', serif", fontSize: '1.15rem' }}
+              >
+                Explore handcrafted Rajasthan block prints, pure cotton shirts, tees, hoodies, and signature canvas totes.
+              </p>
+            </div>
             <Link
               to="/collections/all"
-              className="inline-flex items-center justify-center px-8 py-3.5 text-sm font-semibold rounded-[6px] transition-all bg-[#c4622d] text-white hover:bg-[#923f12] cursor-pointer"
+              className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-[#c4622d] hover:text-[#923f12] transition-colors shrink-0"
               style={{ fontFamily: "'DM Sans', sans-serif" }}
             >
-              Shop The Collection
+              <span>View All Categories</span>
+              <ArrowRight className="w-4 h-4" />
             </Link>
-            <Link
-              to="/collections"
-              className="inline-flex items-center justify-center px-8 py-3.5 text-sm font-semibold rounded-[6px] transition-all text-white border border-white/40 bg-white/10 hover:bg-white/20 backdrop-blur-xs cursor-pointer"
-              style={{ fontFamily: "'DM Sans', sans-serif" }}
-            >
-              Browse Categories
-            </Link>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            {mainCategories.map((category) => (
+              <Link
+                key={category.title}
+                to={category.href}
+                className="group relative overflow-hidden rounded-[8px] bg-white border border-[#e8e4df] shadow-xs hover:shadow-xl transition-all duration-300 flex flex-col"
+              >
+                <div className="relative w-full aspect-[4/3] overflow-hidden bg-[#f0edea]">
+                  {category.image ? (
+                    <img
+                      src={category.image}
+                      alt={category.title}
+                      loading="lazy"
+                      className="w-full h-full object-cover group-hover:scale-108 transition-transform duration-700"
+                      onError={hideBrokenImage}
+                    />
+                  ) : (
+                    <div className="w-full h-full bg-[#e8dfd5] flex items-center justify-center text-[#8b7355]">
+                      <ShoppingBag className="w-12 h-12 opacity-30" />
+                    </div>
+                  )}
+                  <div className="absolute inset-0 bg-gradient-to-t from-[#060505]/75 via-transparent to-transparent opacity-80 group-hover:opacity-90 transition-opacity" />
+                  <span className="absolute top-3.5 left-3.5 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest bg-white/90 text-[#060505] shadow-xs">
+                    {category.badge}
+                  </span>
+                </div>
+
+                <div className="p-5 flex flex-col justify-between flex-1 bg-white">
+                  <div>
+                    <h3
+                      className="text-lg font-bold text-[#060505] group-hover:text-[#c4622d] transition-colors"
+                      style={{ fontFamily: "'Playfair Display', serif" }}
+                    >
+                      {category.title}
+                    </h3>
+                    <p
+                      className="text-xs text-[#686764] mt-1 font-normal"
+                      style={{ fontFamily: "'DM Sans', sans-serif" }}
+                    >
+                      {category.subtitle}
+                    </p>
+                  </div>
+                  <div className="mt-4 pt-3 border-t border-[#f0edea] flex items-center justify-between text-xs font-semibold text-[#c4622d]">
+                    <span>Explore Products</span>
+                    <ArrowRight className="w-4 h-4 transform group-hover:translate-x-1 transition-transform" />
+                  </div>
+                </div>
+              </Link>
+            ))}
           </div>
         </div>
       </section>

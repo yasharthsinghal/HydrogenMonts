@@ -58,6 +58,9 @@ export function generateOtpEmailHtml(code: string): string {
                 If you did not request this code, you can safely ignore this email.
                 Your account remains secure.
               </p>
+              <p style="margin:12px 0 0;color:#8b7355;font-size:11px;line-height:1.5;">
+                💡 <em>If this email appeared in your Spam folder, mark it as <strong>"Report Not Spam"</strong> to receive future MONTS updates in your inbox.</em>
+              </p>
             </td>
           </tr>
           <!-- Footer -->

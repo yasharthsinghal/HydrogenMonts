@@ -13,6 +13,7 @@ export interface MobileNavProps {
 export const MobileNav: React.FC<MobileNavProps> = ({ isOpen, onClose }) => {
   const rootData = useRouteLoaderData<{ collections?: CollectionCardItem[] }>('root');
   const [collectionsExpanded, setCollectionsExpanded] = React.useState(false);
+  const [shopExpanded, setShopExpanded] = React.useState(true);
   const drawerRef = useRef<HTMLDivElement>(null);
 
   const collectionsList: NavSubItem[] = React.useMemo(() => {
@@ -101,6 +102,51 @@ export const MobileNav: React.FC<MobileNavProps> = ({ isOpen, onClose }) => {
           {/* Nav Links */}
           <nav className="p-5 flex flex-col divide-y divide-[#e8e4df]">
             {NAV_ITEMS.map((item) => {
+              if (item.label === 'Shop') {
+                return (
+                  <div key={item.label} className="py-2 flex flex-col">
+                    <div className="flex items-center justify-between py-2 text-sm font-semibold uppercase tracking-wider text-[#1a1a1a]">
+                      <Link to={item.href} onClick={onClose} className="hover:text-[#c4622d] transition-colors">
+                        {item.label}
+                      </Link>
+                      <button
+                        type="button"
+                        onClick={() => setShopExpanded((prev) => !prev)}
+                        className="p-1 text-[#8b7355] hover:text-[#c4622d] cursor-pointer text-xs flex items-center gap-1"
+                        aria-label="Toggle shop categories"
+                      >
+                        <ChevronRight
+                          className={`w-4 h-4 transition-transform duration-250 ease-out ${
+                            shopExpanded ? 'rotate-90 text-[#c4622d]' : ''
+                          }`}
+                        />
+                      </button>
+                    </div>
+
+                    <div
+                      className={`grid transition-[grid-template-rows] duration-250 ease-out ${
+                        shopExpanded ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'
+                      }`}
+                    >
+                      <div className="overflow-hidden">
+                        <div className="pl-3 pb-2 flex flex-col gap-1.5 border-l-2 border-[#c4622d]/40 ml-1 mt-1">
+                          {item.children?.map((subItem) => (
+                            <Link
+                              key={subItem.label}
+                              to={subItem.href}
+                              onClick={onClose}
+                              className="py-1 text-xs font-medium text-[#4a4947] hover:text-[#c4622d] transition-colors flex items-center justify-between"
+                            >
+                              <span>{subItem.label}</span>
+                            </Link>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              }
+
               if (item.label === 'Collections') {
                 return (
                   <div key={item.label} className="py-2 flex flex-col">
@@ -122,7 +168,6 @@ export const MobileNav: React.FC<MobileNavProps> = ({ isOpen, onClose }) => {
                       </button>
                     </div>
 
-                    {/* Smooth Accordion with CSS grid */}
                     <div
                       className={`grid transition-[grid-template-rows] duration-250 ease-out ${
                         collectionsExpanded ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'

@@ -191,6 +191,9 @@ export const EmailChangeModal: React.FC<EmailChangeModalProps> = ({
               <p>
                 Enter the 6-digit code sent to <strong className="text-[#c4622d]">{newEmail}</strong>.
               </p>
+              <p className="mt-1.5 text-[11px] text-[#8b7355]">
+                📩 <em>Can't find it in your main inbox? Please check your <strong>Spam or Junk</strong> folder.</em>
+              </p>
             </div>
 
             <Input

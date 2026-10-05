@@ -96,7 +96,7 @@ export async function action({ request, context }: ActionFunctionArgs) {
       success: true,
       step: 'verify',
       newEmail,
-      message: `A 6-digit verification code was sent to ${newEmail}.`,
+      message: `A 6-digit verification code was sent to ${newEmail}. Please check your inbox and spam folder.`,
     });
   }
 

@@ -17,14 +17,14 @@ export interface NavItem {
 }
 
 export const DEFAULT_COLLECTIONS: NavSubItem[] = [
-  { label: 'T-Shirts', href: '/collections/monts-t-shirts', description: 'Everyday, oversized & graphic luxury tees' },
-  { label: 'Shirts', href: '/collections/monts-shirts', description: 'Casual & premium artisanal shirts' },
-  { label: 'Hoodies', href: '/collections/monts-hoodies', description: 'Minimal & heavyweight cotton hoodies' },
+  { label: 'T-Shirts & Tops', href: '/collections/monts-t-shirts', description: 'Everyday, oversized & graphic luxury tees' },
+  { label: 'Shirts & Kurtas', href: '/collections/monts-shirts', description: 'Casual & premium artisanal cotton shirts' },
+  { label: 'Hoodies & Sweatshirts', href: '/collections/monts-hoodies', description: 'Minimal & heavyweight cotton hoodies' },
   { label: 'Pants & Joggers', href: '/collections/monts-pants-and-joggers', description: 'Tailored everyday bottom wear' },
-  { label: 'Jackets & Overshirts', href: '/collections/monts-jackets-and-overshirts', description: 'Layering outerwear & utility overshirts' },
+  { label: 'Jackets & Outerwear', href: '/collections/monts-jackets-and-overshirts', description: 'Layering outerwear & utility overshirts' },
+  { label: 'Bags & Totes', href: '/collections/monts-bags', description: 'Block-printed canvas totes & pouch sets' },
   { label: 'Footwear', href: '/collections/monts-footwear', description: 'Handcrafted minimal footwear' },
-  { label: 'Bags', href: '/collections/monts-bags', description: 'Canvas totes & artisanal backpacks' },
-  { label: 'Accessories', href: '/collections/monts-accessories', description: 'Caps, belts, wallets & scarves' },
+  { label: 'Accessories', href: '/collections/monts-accessories', description: 'Caps, belts, pouches & scarves' },
 ];
 
 export const NAV_ITEMS: NavItem[] = [
@@ -33,9 +33,14 @@ export const NAV_ITEMS: NavItem[] = [
     label: 'Shop',
     href: '/collections/all',
     children: [
-      { label: 'All Products', href: '/collections/all', description: 'Explore our complete handcrafted catalog' },
-      { label: 'Curated Series', href: '/collections', description: 'Hand-block prints & artisanal series' },
-      { label: 'Ready-to-Wear', href: '/collections/all', description: 'Limited batch luxury silhouettes' },
+      { label: 'All Products', href: '/collections/all', description: 'Explore complete handcrafted catalog' },
+      { label: 'T-Shirts & Tops', href: '/collections/monts-t-shirts', description: 'Everyday, oversized & graphic tees' },
+      { label: 'Shirts & Kurtas', href: '/collections/monts-shirts', description: 'Casual & premium artisanal cotton shirts' },
+      { label: 'Hoodies & Sweatshirts', href: '/collections/monts-hoodies', description: 'Minimal & heavyweight cotton hoodies' },
+      { label: 'Pants & Joggers', href: '/collections/monts-pants-and-joggers', description: 'Tailored everyday bottom wear' },
+      { label: 'Jackets & Outerwear', href: '/collections/monts-jackets-and-overshirts', description: 'Layering outerwear & overshirts' },
+      { label: 'Handcrafted Bags & Totes', href: '/collections/monts-bags', description: 'Block-printed canvas totes & pouch sets' },
+      { label: 'Accessories', href: '/collections/monts-accessories', description: 'Caps, belts, pouches & scarves' },
     ],
   },
   { label: 'Collections', href: '/collections' },
@@ -47,7 +52,9 @@ export const NAV_ITEMS: NavItem[] = [
 export const Navigation: React.FC = () => {
   const rootData = useRouteLoaderData<{ collections?: CollectionCardItem[] }>('root');
   const [isCollectionsOpen, setIsCollectionsOpen] = useState(false);
-  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const [isShopOpen, setIsShopOpen] = useState(false);
+  const collectionsTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const shopTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Compute all available collections (Shopify dynamic list with curated defaults fallback)
   const collectionsList: NavSubItem[] = React.useMemo(() => {
@@ -61,27 +68,36 @@ export const Navigation: React.FC = () => {
     return DEFAULT_COLLECTIONS;
   }, [rootData?.collections]);
 
-  const handleMouseEnter = () => {
-    if (timeoutRef.current) {
-      clearTimeout(timeoutRef.current);
-      timeoutRef.current = null;
-    }
+  const handleCollectionsEnter = () => {
+    if (collectionsTimeoutRef.current) clearTimeout(collectionsTimeoutRef.current);
     setIsCollectionsOpen(true);
   };
 
-  const handleMouseLeave = () => {
-    timeoutRef.current = setTimeout(() => {
+  const handleCollectionsLeave = () => {
+    collectionsTimeoutRef.current = setTimeout(() => {
       setIsCollectionsOpen(false);
+    }, 180);
+  };
+
+  const handleShopEnter = () => {
+    if (shopTimeoutRef.current) clearTimeout(shopTimeoutRef.current);
+    setIsShopOpen(true);
+  };
+
+  const handleShopLeave = () => {
+    shopTimeoutRef.current = setTimeout(() => {
+      setIsShopOpen(false);
     }, 180);
   };
 
   useEffect(() => {
     return () => {
-      if (timeoutRef.current) {
-        clearTimeout(timeoutRef.current);
-      }
+      if (collectionsTimeoutRef.current) clearTimeout(collectionsTimeoutRef.current);
+      if (shopTimeoutRef.current) clearTimeout(shopTimeoutRef.current);
     };
   }, []);
+
+  const shopItem = NAV_ITEMS.find((item) => item.label === 'Shop');
 
   return (
     <nav
@@ -89,13 +105,123 @@ export const Navigation: React.FC = () => {
       style={{ fontFamily: "'DM Sans', sans-serif" }}
     >
       {NAV_ITEMS.map((item) => {
+        if (item.label === 'Shop') {
+          return (
+            <div
+              key={item.href}
+              className="relative py-1"
+              onMouseEnter={handleShopEnter}
+              onMouseLeave={handleShopLeave}
+            >
+              <NavLink
+                to={item.href}
+                end
+                className={({ isActive }) =>
+                  clsx(
+                    'text-xs font-semibold uppercase tracking-[0.15em] transition-colors relative py-1 hover:text-[#c4622d] flex items-center gap-1',
+                    isActive || isShopOpen ? 'text-[#c4622d]' : 'text-[#1a1a1a]',
+                  )
+                }
+              >
+                {({ isActive }) => (
+                  <>
+                    <span>{item.label}</span>
+                    <ChevronDown
+                      className={clsx(
+                        'w-3.5 h-3.5 transition-transform duration-200',
+                        isShopOpen ? 'rotate-180 text-[#c4622d]' : 'text-[#8b7355]',
+                      )}
+                    />
+                    {isActive && (
+                      <span className="absolute bottom-0 inset-x-0 h-0.5 bg-[#c4622d] rounded-full" />
+                    )}
+                  </>
+                )}
+              </NavLink>
+
+              {/* Shop Hover Dropdown Mega Menu */}
+              <div
+                className={`absolute top-full left-1/2 -translate-x-1/2 pt-2 z-50 transition-all duration-200 ease-out ${
+                  isShopOpen
+                    ? 'opacity-100 translate-y-0 scale-100 pointer-events-auto'
+                    : 'opacity-0 translate-y-2 scale-95 pointer-events-none'
+                }`}
+                style={{ width: '580px' }}
+              >
+                <div className="absolute -top-2 inset-x-0 h-3" />
+
+                <div className="bg-[#faf8f5] border border-[#e8e4df] rounded-[8px] shadow-2xl p-6 text-left">
+                  <div className="flex items-center justify-between pb-3.5 mb-4 border-b border-[#e8e4df]">
+                    <div>
+                      <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#8b7355] block">
+                        Vastra By Monty Catalog
+                      </span>
+                      <h3
+                        className="text-base font-bold text-[#060505] mt-0.5"
+                        style={{ fontFamily: "'Playfair Display', serif" }}
+                      >
+                        Shop By Product Category
+                      </h3>
+                    </div>
+                    <Link
+                      to="/collections/all"
+                      onClick={() => setIsShopOpen(false)}
+                      className="text-xs font-semibold text-[#c4622d] hover:text-[#923f12] flex items-center gap-1 transition-colors"
+                    >
+                      <span>Explore All ({shopItem?.children?.length || 0})</span>
+                      <ArrowRight className="w-3.5 h-3.5" />
+                    </Link>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2">
+                    {shopItem?.children?.map((sub) => (
+                      <Link
+                        key={sub.href + sub.label}
+                        to={sub.href}
+                        onClick={() => setIsShopOpen(false)}
+                        className="group/item flex items-center justify-between p-2.5 rounded-[6px] hover:bg-[#f0edea] transition-all border border-transparent hover:border-[#e8e4df]"
+                      >
+                        <div className="flex flex-col">
+                          <span className="text-xs font-semibold text-[#1a1a1a] group-hover/item:text-[#c4622d] transition-colors">
+                            {sub.label}
+                          </span>
+                          {sub.description && (
+                            <span className="text-[11px] text-[#686764] line-clamp-1 mt-0.5 font-normal">
+                              {sub.description}
+                            </span>
+                          )}
+                        </div>
+                        <ArrowRight className="w-3.5 h-3.5 text-[#afaba6] group-hover/item:text-[#c4622d] group-hover/item:translate-x-0.5 transition-all opacity-60 group-hover/item:opacity-100 flex-shrink-0 ml-2" />
+                      </Link>
+                    ))}
+                  </div>
+
+                  <div className="mt-4 pt-3.5 border-t border-[#e8e4df] flex items-center justify-between text-xs bg-[#f5f0e8]/60 -mx-6 -mb-6 p-4 rounded-b-[7px]">
+                    <div className="flex items-center gap-1.5 text-[#8b7355] text-[11px]">
+                      <Sparkles className="w-3.5 h-3.5 text-[#c4622d]" />
+                      <span>Artisanal Rajasthan Craftsmanship &amp; Pure Long-Staple Fabrics</span>
+                    </div>
+                    <Link
+                      to="/collections/all"
+                      onClick={() => setIsShopOpen(false)}
+                      className="text-[11px] font-semibold text-[#060505] hover:text-[#c4622d] transition-colors"
+                    >
+                      View Full Catalog →
+                    </Link>
+                  </div>
+                </div>
+              </div>
+            </div>
+          );
+        }
+
         if (item.label === 'Collections') {
           return (
             <div
               key={item.href}
               className="relative py-1"
-              onMouseEnter={handleMouseEnter}
-              onMouseLeave={handleMouseLeave}
+              onMouseEnter={handleCollectionsEnter}
+              onMouseLeave={handleCollectionsLeave}
             >
               <NavLink
                 to={item.href}
@@ -132,11 +258,9 @@ export const Navigation: React.FC = () => {
                 }`}
                 style={{ width: '560px' }}
               >
-                {/* Invisible hover bridge to prevent flickering when cursor moves across gap */}
                 <div className="absolute -top-2 inset-x-0 h-3" />
 
                 <div className="bg-[#faf8f5] border border-[#e8e4df] rounded-[8px] shadow-2xl p-6 text-left">
-                  {/* Header */}
                   <div className="flex items-center justify-between pb-3.5 mb-4 border-b border-[#e8e4df]">
                     <div>
                       <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#8b7355] block">
@@ -159,7 +283,6 @@ export const Navigation: React.FC = () => {
                     </Link>
                   </div>
 
-                  {/* Collections Grid */}
                   <div className="grid grid-cols-2 gap-2">
                     {collectionsList.map((col) => (
                       <Link
@@ -183,7 +306,6 @@ export const Navigation: React.FC = () => {
                     ))}
                   </div>
 
-                  {/* Bottom Footer Bar */}
                   <div className="mt-4 pt-3.5 border-t border-[#e8e4df] flex items-center justify-between text-xs bg-[#f5f0e8]/60 -mx-6 -mb-6 p-4 rounded-b-[7px]">
                     <div className="flex items-center gap-1.5 text-[#8b7355] text-[11px]">
                       <Sparkles className="w-3.5 h-3.5 text-[#c4622d]" />
