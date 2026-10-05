@@ -17,14 +17,16 @@ export interface NavItem {
 }
 
 export const DEFAULT_COLLECTIONS: NavSubItem[] = [
-  { label: 'T-Shirts & Tops', href: '/collections/monts-t-shirts', description: 'Everyday, oversized & graphic luxury tees' },
-  { label: 'Shirts & Kurtas', href: '/collections/monts-shirts', description: 'Casual & premium artisanal cotton shirts' },
-  { label: 'Hoodies & Sweatshirts', href: '/collections/monts-hoodies', description: 'Minimal & heavyweight cotton hoodies' },
-  { label: 'Pants & Joggers', href: '/collections/monts-pants-and-joggers', description: 'Tailored everyday bottom wear' },
-  { label: 'Jackets & Outerwear', href: '/collections/monts-jackets-and-overshirts', description: 'Layering outerwear & utility overshirts' },
-  { label: 'Bags & Totes', href: '/collections/monts-bags', description: 'Block-printed canvas totes & pouch sets' },
-  { label: 'Footwear', href: '/collections/monts-footwear', description: 'Handcrafted minimal footwear' },
-  { label: 'Accessories', href: '/collections/monts-accessories', description: 'Caps, belts, pouches & scarves' },
+  { label: 'Tote Bags', href: '/collections/tote-bags', description: 'Handblocked & quilted cotton tote bags' },
+  { label: 'Pouch Bags (Toiletry Sets)', href: '/collections/pouch-bags-toiletry-sets', description: 'Organized multi-pouch bag sets' },
+  { label: 'Mobile Sling Bags', href: '/collections/mobile-sling-bags', description: 'Handblocked cotton quilted cross-shoulder slings' },
+  { label: 'Duffle Bags', href: '/collections/duffle-bags', description: 'Artisanal travel & duffle bags' },
+  { label: 'Laptop Bags & Office', href: '/collections/laptop-bags-office-essentials', description: 'Quilted laptop bags & office essentials' },
+  { label: 'Multi-Utility Organizers', href: '/collections/multi-utility-organizers', description: 'Vanity & tool organizers' },
+  { label: 'Sunglasses Covers', href: '/collections/sunglasses-covers', description: 'Crochet & handblock print sunglass cases' },
+  { label: 'Wallets & Clutches', href: '/collections/wallets-clutches', description: 'Structured cotton quilted clutches' },
+  { label: 'Accessories', href: '/collections/accessories', description: 'Handblocked hankies & artisanal items' },
+  { label: 'Kids\' Soft Toys', href: '/collections/kids-soft-toys', description: 'Handcrafted cotton Giraffe & Elephant toys' },
 ];
 
 export const NAV_ITEMS: NavItem[] = [
@@ -34,13 +36,16 @@ export const NAV_ITEMS: NavItem[] = [
     href: '/collections/all',
     children: [
       { label: 'All Products', href: '/collections/all', description: 'Explore complete handcrafted catalog' },
-      { label: 'T-Shirts & Tops', href: '/collections/monts-t-shirts', description: 'Everyday, oversized & graphic tees' },
-      { label: 'Shirts & Kurtas', href: '/collections/monts-shirts', description: 'Casual & premium artisanal cotton shirts' },
-      { label: 'Hoodies & Sweatshirts', href: '/collections/monts-hoodies', description: 'Minimal & heavyweight cotton hoodies' },
-      { label: 'Pants & Joggers', href: '/collections/monts-pants-and-joggers', description: 'Tailored everyday bottom wear' },
-      { label: 'Jackets & Outerwear', href: '/collections/monts-jackets-and-overshirts', description: 'Layering outerwear & overshirts' },
-      { label: 'Handcrafted Bags & Totes', href: '/collections/monts-bags', description: 'Block-printed canvas totes & pouch sets' },
-      { label: 'Accessories', href: '/collections/monts-accessories', description: 'Caps, belts, pouches & scarves' },
+      { label: 'Tote Bags', href: '/collections/tote-bags', description: 'Quilted & handblocked canvas totes' },
+      { label: 'Pouch Bags & Toiletry Sets', href: '/collections/pouch-bags-toiletry-sets', description: 'Multi-utility pouch bag sets' },
+      { label: 'Mobile Sling Bags', href: '/collections/mobile-sling-bags', description: 'Cross-shoulder slings & pouches' },
+      { label: 'Duffle Bags', href: '/collections/duffle-bags', description: 'Artisanal weekenders & travel duffles' },
+      { label: 'Laptop Bags & Office', href: '/collections/laptop-bags-office-essentials', description: 'Quilted laptop bags & work totes' },
+      { label: 'Multi-Utility Organizers', href: '/collections/multi-utility-organizers', description: 'Vanity & tool organizers' },
+      { label: 'Sunglasses Covers', href: '/collections/sunglasses-covers', description: 'Structured & crochet sunglass cases' },
+      { label: 'Wallets & Clutches', href: '/collections/wallets-clutches', description: 'Handblocked cotton clutches' },
+      { label: 'Accessories', href: '/collections/accessories', description: 'Hankies, caps & small goods' },
+      { label: 'Kids\' Soft Toys', href: '/collections/kids-soft-toys', description: 'Handcrafted cotton soft toys' },
     ],
   },
   { label: 'Collections', href: '/collections' },

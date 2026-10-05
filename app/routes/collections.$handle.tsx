@@ -122,24 +122,65 @@ export async function loader({ params, request, context }: LoaderFunctionArgs) {
       reverse = false;
   }
 
+  // Normalize handle (e.g. handle spaces like "monts shirts" -> "monts-shirts")
+  const sanitizedHandle = decodeURIComponent(handle)
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, '-')
+    .replace(/[^a-z0-9-]/g, '');
+
   let collection;
   try {
     const data = await storefront.query(COLLECTION_BY_HANDLE_QUERY, {
       variables: {
-        handle,
+        handle: sanitizedHandle,
         first: 250,
         sortKey,
         reverse,
       },
       cache: storefront.CacheNone(),
     });
-    collection = data.collection;
+    collection = data?.collection;
   } catch (error) {
     console.error('Collection query error:', error);
   }
 
+  // If collection wasn't found by handle, fall back gracefully to all products catalog
   if (!collection) {
-    throw new Response('Collection Not Found', { status: 404 });
+    try {
+      const fallbackData = await storefront.query(ALL_PRODUCTS_QUERY, {
+        variables: {
+          first: 250,
+          sortKey: sortKey === 'CREATED' ? 'CREATED_AT' : sortKey,
+          reverse,
+        },
+        cache: storefront.CacheNone(),
+      });
+
+      const products = (fallbackData?.products?.nodes || []) as ProductCardItem[];
+      const prettyTitle = handle
+        .replace(/[-_]+/g, ' ')
+        .replace(/\b\w/g, (c) => c.toUpperCase());
+
+      collection = {
+        id: `fallback-${sanitizedHandle}`,
+        title: prettyTitle || 'Store Catalog',
+        handle: sanitizedHandle,
+        description: 'Discover handcrafted artisanal products from our Jaipur atelier.',
+        descriptionHtml: '<p>Discover handcrafted artisanal products from our Jaipur atelier.</p>',
+        image: null,
+      };
+
+      return {
+        collection,
+        products,
+        currentSort: sort,
+        canonicalUrl,
+      };
+    } catch (fallbackErr) {
+      console.error('Fallback query error:', fallbackErr);
+      throw new Response('Collection Not Found', { status: 404 });
+    }
   }
 
   return {
@@ -178,11 +219,6 @@ export default function CollectionDetailRoute() {
 
   return (
     <div className="max-w-[1400px] mx-auto px-6 md:px-12 py-12">
-      {/* Collection JSON-LD */}
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(collectionJsonLd) }}
-      />
 
       <Breadcrumb
         items={[
