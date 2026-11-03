@@ -53,7 +53,7 @@ export default function PageRoute() {
   const { page } = useLoaderData<typeof loader>();
 
   return (
-    <div className="w-full max-w-[1920px] mx-auto px-3 sm:px-4 md:px-5 py-8 md:py-10">
+    <div className="max-w-[1400px] mx-auto px-6 md:px-12 py-12">
       <Breadcrumb items={[{ label: page.title }]} className="mb-8" />
       <article className="max-w-3xl mx-auto">
         <h1 className="text-4xl font-bold text-[#060505] mb-6" style={{ fontFamily: "'Playfair Display', serif" }}>

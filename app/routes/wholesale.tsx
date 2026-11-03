@@ -1,4 +1,4 @@
-import { redirect, type MetaFunction, type LoaderFunctionArgs } from 'react-router';
+import { type MetaFunction } from 'react-router';
 
 export const meta: MetaFunction = () => {
   return [
@@ -6,11 +6,6 @@ export const meta: MetaFunction = () => {
     { name: 'description', content: 'Stock artisanal handcrafted MONTS collections in your boutique or luxury store.' },
   ];
 };
-
-export function loader({}: LoaderFunctionArgs) {
-  // Wholesale is currently disabled
-  return redirect('/');
-}
 
 export default function WholesaleRoute() {
   return (
@@ -67,7 +62,7 @@ export default function WholesaleRoute() {
   const [submitted, setSubmitted] = useState(false);
 
   return (
-    <div className="w-full max-w-[1920px] mx-auto px-3 sm:px-4 md:px-5 py-8 md:py-10">
+    <div className="max-w-[1400px] mx-auto px-6 md:px-12 py-12">
       <Breadcrumb items={[{ label: 'Wholesale Inquiries' }]} className="mb-8" />
 
       <div className="max-w-3xl mx-auto">

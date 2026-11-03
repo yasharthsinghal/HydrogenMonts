@@ -25,7 +25,7 @@ export const PRODUCT_CARD_FRAGMENT = `#graphql
     featuredImage {
       ...ImageFragment
     }
-    images(first: 8) {
+    images(first: 2) {
       nodes {
         ...ImageFragment
       }

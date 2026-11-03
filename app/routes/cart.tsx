@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { data, redirect, useLoaderData, useFetcher, Link, type MetaFunction, type ActionFunctionArgs, type LoaderFunctionArgs } from 'react-router';
+import { data, useLoaderData, useFetcher, Link, type MetaFunction, type ActionFunctionArgs, type LoaderFunctionArgs } from 'react-router';
 import { CartItem } from '~/components/cart/CartItem';
 import { Breadcrumb } from '~/components/ui/Breadcrumb';
 import { EmptyState } from '~/components/ui/EmptyState';
@@ -19,15 +19,7 @@ export const meta: MetaFunction = () => {
 };
 
 export async function action({ request, context }: ActionFunctionArgs) {
-  const { cart, session } = await getHydrogenContext(context, request);
-  const customerEmail = session.get('customerEmail');
-  const customerAccessToken = session.get('customerAccessToken');
-  const isLoggedIn = Boolean(customerAccessToken || customerEmail);
-
-  if (!isLoggedIn) {
-    return redirect('/account/login?return_to=/cart');
-  }
-
+  const { cart } = await getHydrogenContext(context, request);
   const formData = await request.formData();
   const formInput = formData.get('cartFormInput');
 
@@ -69,15 +61,7 @@ export async function action({ request, context }: ActionFunctionArgs) {
 }
 
 export async function loader({ context, request }: LoaderFunctionArgs) {
-  const { cart, session } = await getHydrogenContext(context, request);
-  const customerEmail = session.get('customerEmail');
-  const customerAccessToken = session.get('customerAccessToken');
-  const isLoggedIn = Boolean(customerAccessToken || customerEmail);
-
-  if (!isLoggedIn) {
-    return redirect('/account/login?return_to=/cart');
-  }
-
+  const { cart } = await getHydrogenContext(context, request);
   let cartData = null;
   try {
     cartData = await cart.get();
@@ -154,7 +138,7 @@ export default function CartRoute() {
   };
 
   return (
-    <div className="w-full max-w-[1920px] mx-auto px-3 sm:px-4 md:px-5 py-8 md:py-10">
+    <div className="max-w-[1400px] mx-auto px-6 md:px-12 py-12">
       <Breadcrumb items={[{ label: 'Shopping Cart' }]} className="mb-8" />
 
       <h1

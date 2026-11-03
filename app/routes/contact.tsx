@@ -226,7 +226,7 @@ export default function ContactRoute() {
   const submittedPayload = fetcher.data?.payload;
 
   return (
-    <div className="w-full max-w-[1920px] mx-auto px-3 sm:px-4 md:px-5 py-8 md:py-10">
+    <div className="max-w-[1400px] mx-auto px-6 md:px-12 py-12">
       <Breadcrumb items={[{ label: 'Contact Us' }]} className="mb-8" />
 
       <div className="max-w-4xl mx-auto">

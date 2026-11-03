@@ -12,7 +12,7 @@ export const meta: MetaFunction = () => {
 
 export default function NotFoundRoute() {
   return (
-    <div className="w-full max-w-[1920px] mx-auto px-3 sm:px-4 md:px-5 py-20">
+    <div className="max-w-[1400px] mx-auto px-6 md:px-12 py-20">
       <EmptyState
         icon={<HelpCircle className="w-8 h-8" />}
         title="Page Not Found"

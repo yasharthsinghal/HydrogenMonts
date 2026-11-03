@@ -1,19 +1,17 @@
 import React, { useEffect, useRef } from 'react';
 import { Link } from 'react-router';
-import { X, ChevronRight, User, ShoppingBag, Sparkles, LogIn, UserPlus } from 'lucide-react';
+import { X, ChevronRight, User, ShoppingBag, Sparkles } from 'lucide-react';
 import { NAV_ITEMS, DEFAULT_COLLECTIONS, type NavSubItem } from './Navigation';
 import { useRouteLoaderData } from 'react-router';
 import type { CollectionCardItem } from '~/types/storefront.types';
 
 export interface MobileNavProps {
   isOpen: boolean;
-  isLoggedIn?: boolean;
   onClose: () => void;
 }
 
-export const MobileNav: React.FC<MobileNavProps> = ({ isOpen, isLoggedIn: propIsLoggedIn, onClose }) => {
-  const rootData = useRouteLoaderData<{ isLoggedIn?: boolean; collections?: CollectionCardItem[] }>('root');
-  const loggedIn = propIsLoggedIn ?? Boolean(rootData?.isLoggedIn);
+export const MobileNav: React.FC<MobileNavProps> = ({ isOpen, onClose }) => {
+  const rootData = useRouteLoaderData<{ collections?: CollectionCardItem[] }>('root');
   const [collectionsExpanded, setCollectionsExpanded] = React.useState(false);
   const [shopExpanded, setShopExpanded] = React.useState(true);
   const drawerRef = useRef<HTMLDivElement>(null);
@@ -75,33 +73,39 @@ export const MobileNav: React.FC<MobileNavProps> = ({ isOpen, isLoggedIn: propIs
       >
         <div className="overflow-y-auto">
           {/* Header */}
-          <div className="flex items-center justify-between px-4 py-3 border-b border-[#e8e4df]">
-            <Link to="/" onClick={onClose} className="flex flex-col items-center justify-center text-center leading-none group">
-              <img
-                src="/monts_logo.png"
-                alt="MONTS"
-                className="h-7.5 w-auto object-contain mx-auto"
-              />
-              <span className="text-[6.5px] tracking-[0.08em] uppercase font-semibold text-[#8b7355] mt-0.5 whitespace-nowrap text-center block">
-                Vastra by Monty
+          <div className="flex items-center justify-between p-5 border-b border-[#e8e4df]">
+            <div className="flex flex-col gap-1.5">
+              <Link to="/" onClick={onClose} className="flex items-center">
+                <img
+                  src="/monts_logo.png"
+                  alt="MONTS"
+                  className="h-8 w-auto object-contain"
+                />
+              </Link>
+              <span className="inline-flex items-center gap-1.5 text-[10px] text-[#8b7355] font-medium tracking-wide">
+                <Sparkles className="w-3 h-3 text-[#c4622d] shrink-0" />
+                <span>
+                  <strong className="text-[#2c2c2c] font-semibold">Vastra by Monty</strong> is now{' '}
+                  <strong className="text-[#c4622d] font-bold">MONTS</strong>
+                </span>
               </span>
-            </Link>
+            </div>
             <button
               onClick={onClose}
-              className="p-1 rounded-full text-[#686764] hover:text-[#060505] hover:bg-[#f0edea] active:scale-95 transition-all cursor-pointer self-start"
+              className="p-1.5 rounded-full text-[#686764] hover:text-[#060505] hover:bg-[#f0edea] active:scale-95 transition-all cursor-pointer self-start"
               aria-label="Close menu"
             >
-              <X className="w-4.5 h-4.5" />
+              <X className="w-5 h-5" />
             </button>
           </div>
 
           {/* Nav Links */}
-          <nav className="px-3.5 py-1.5 flex flex-col divide-y divide-[#e8e4df]/60">
+          <nav className="p-5 flex flex-col divide-y divide-[#e8e4df]">
             {NAV_ITEMS.map((item) => {
               if (item.label === 'Shop') {
                 return (
-                  <div key={item.label} className="py-1 flex flex-col">
-                    <div className="flex items-center justify-between py-1.5 px-1 text-xs font-semibold uppercase tracking-wider text-[#1a1a1a]">
+                  <div key={item.label} className="py-2 flex flex-col">
+                    <div className="flex items-center justify-between py-2 text-sm font-semibold uppercase tracking-wider text-[#1a1a1a]">
                       <Link to={item.href} onClick={onClose} className="hover:text-[#c4622d] transition-colors">
                         {item.label}
                       </Link>
@@ -112,7 +116,7 @@ export const MobileNav: React.FC<MobileNavProps> = ({ isOpen, isLoggedIn: propIs
                         aria-label="Toggle shop categories"
                       >
                         <ChevronRight
-                          className={`w-3.5 h-3.5 transition-transform duration-250 ease-out ${
+                          className={`w-4 h-4 transition-transform duration-250 ease-out ${
                             shopExpanded ? 'rotate-90 text-[#c4622d]' : ''
                           }`}
                         />
@@ -125,13 +129,13 @@ export const MobileNav: React.FC<MobileNavProps> = ({ isOpen, isLoggedIn: propIs
                       }`}
                     >
                       <div className="overflow-hidden">
-                        <div className="pl-2.5 pb-1 flex flex-col gap-0.5 border-l-2 border-[#c4622d]/40 ml-1.5 mt-0.5">
+                        <div className="pl-3 pb-2 flex flex-col gap-1.5 border-l-2 border-[#c4622d]/40 ml-1 mt-1">
                           {item.children?.map((subItem) => (
                             <Link
                               key={subItem.label}
                               to={subItem.href}
                               onClick={onClose}
-                              className="py-1 px-1 text-[11.5px] font-medium text-[#4a4947] hover:text-[#c4622d] transition-colors flex items-center justify-between"
+                              className="py-1 text-xs font-medium text-[#4a4947] hover:text-[#c4622d] transition-colors flex items-center justify-between"
                             >
                               <span>{subItem.label}</span>
                             </Link>
@@ -145,8 +149,8 @@ export const MobileNav: React.FC<MobileNavProps> = ({ isOpen, isLoggedIn: propIs
 
               if (item.label === 'Collections') {
                 return (
-                  <div key={item.label} className="py-1 flex flex-col">
-                    <div className="flex items-center justify-between py-1.5 px-1 text-xs font-semibold uppercase tracking-wider text-[#1a1a1a]">
+                  <div key={item.label} className="py-2 flex flex-col">
+                    <div className="flex items-center justify-between py-2 text-sm font-semibold uppercase tracking-wider text-[#1a1a1a]">
                       <Link to={item.href} onClick={onClose} className="hover:text-[#c4622d] transition-colors">
                         {item.label}
                       </Link>
@@ -157,7 +161,7 @@ export const MobileNav: React.FC<MobileNavProps> = ({ isOpen, isLoggedIn: propIs
                         aria-label="Toggle collections"
                       >
                         <ChevronRight
-                          className={`w-3.5 h-3.5 transition-transform duration-250 ease-out ${
+                          className={`w-4 h-4 transition-transform duration-250 ease-out ${
                             collectionsExpanded ? 'rotate-90 text-[#c4622d]' : ''
                           }`}
                         />
@@ -170,11 +174,11 @@ export const MobileNav: React.FC<MobileNavProps> = ({ isOpen, isLoggedIn: propIs
                       }`}
                     >
                       <div className="overflow-hidden">
-                        <div className="pl-2.5 pb-1 flex flex-col gap-0.5 border-l-2 border-[#e8e4df] ml-1.5 mt-0.5">
+                        <div className="pl-3 pb-2 flex flex-col gap-1.5 border-l-2 border-[#e8e4df] ml-1 mt-1">
                           <Link
                             to="/collections"
                             onClick={onClose}
-                            className="py-1 px-1 text-[11.5px] font-semibold text-[#c4622d] hover:underline"
+                            className="py-1 text-xs font-semibold text-[#c4622d] hover:underline"
                           >
                             View All Collections →
                           </Link>
@@ -183,7 +187,7 @@ export const MobileNav: React.FC<MobileNavProps> = ({ isOpen, isLoggedIn: propIs
                               key={col.href}
                               to={col.href}
                               onClick={onClose}
-                              className="py-1 px-1 text-[11.5px] text-[#686764] hover:text-[#c4622d] transition-colors"
+                              className="py-1 text-xs text-[#686764] hover:text-[#c4622d] transition-colors"
                             >
                               {col.label}
                             </Link>
@@ -199,19 +203,19 @@ export const MobileNav: React.FC<MobileNavProps> = ({ isOpen, isLoggedIn: propIs
 
               if (hasChildren) {
                 return (
-                  <div key={item.label} className="py-1 flex flex-col">
-                    <div className="flex items-center justify-between py-1.5 px-1 text-xs font-semibold uppercase tracking-wider text-[#1a1a1a]">
+                  <div key={item.label} className="py-2 flex flex-col">
+                    <div className="flex items-center justify-between py-2 text-sm font-semibold uppercase tracking-wider text-[#1a1a1a]">
                       <Link to={item.href} onClick={onClose} className="hover:text-[#c4622d] transition-colors">
                         {item.label}
                       </Link>
                     </div>
-                    <div className="pl-2.5 pb-1 flex flex-col gap-0.5 border-l-2 border-[#e8e4df] ml-1.5 mt-0.5">
+                    <div className="pl-3 pb-1 flex flex-col gap-2 border-l-2 border-[#e8e4df] ml-1 mt-1">
                       {item.children?.map((subItem) => (
                         <Link
                           key={subItem.label}
                           to={subItem.href}
                           onClick={onClose}
-                          className="py-1 px-1 text-[11.5px] text-[#686764] hover:text-[#c4622d] transition-colors"
+                          className="py-1 text-xs text-[#686764] hover:text-[#c4622d] transition-colors"
                         >
                           {subItem.label}
                         </Link>
@@ -226,10 +230,10 @@ export const MobileNav: React.FC<MobileNavProps> = ({ isOpen, isLoggedIn: propIs
                   key={item.href}
                   to={item.href}
                   onClick={onClose}
-                  className="py-2.5 px-1 flex items-center justify-between text-xs font-semibold uppercase tracking-wider text-[#1a1a1a] hover:text-[#c4622d] transition-colors group"
+                  className="py-3.5 flex items-center justify-between text-sm font-semibold uppercase tracking-wider text-[#1a1a1a] hover:text-[#c4622d] transition-colors group"
                 >
                   <span>{item.label}</span>
-                  <ChevronRight className="w-3.5 h-3.5 text-[#afaba6] group-hover:translate-x-1 transition-transform" />
+                  <ChevronRight className="w-4 h-4 text-[#afaba6] group-hover:translate-x-1 transition-transform" />
                 </Link>
               );
             })}
@@ -237,46 +241,23 @@ export const MobileNav: React.FC<MobileNavProps> = ({ isOpen, isLoggedIn: propIs
         </div>
 
         {/* Footer actions */}
-        <div className="px-4 py-3 border-t border-[#e8e4df] flex flex-col gap-2 bg-[#f5f0e8]/70">
-          {loggedIn ? (
-            <>
-              <Link
-                to="/account"
-                onClick={onClose}
-                className="flex items-center gap-2 text-xs font-medium text-[#1a1a1a] hover:text-[#c4622d] py-1 transition-colors"
-              >
-                <User className="w-3.5 h-3.5 text-[#8b7355]" />
-                <span>My Account</span>
-              </Link>
-              <Link
-                to="/cart"
-                onClick={onClose}
-                className="flex items-center gap-2 text-xs font-medium text-[#1a1a1a] hover:text-[#c4622d] py-1 transition-colors"
-              >
-                <ShoppingBag className="w-3.5 h-3.5 text-[#8b7355]" />
-                <span>View Shopping Cart</span>
-              </Link>
-            </>
-          ) : (
-            <div className="flex flex-col gap-2 pt-0.5">
-              <Link
-                to="/account/login"
-                onClick={onClose}
-                className="flex items-center justify-center gap-2 py-2 px-3 text-xs font-medium border border-[#c4622d] text-[#c4622d] rounded-[5px] hover:bg-[#c4622d]/10 transition-colors"
-              >
-                <LogIn className="w-3.5 h-3.5" />
-                <span>Login</span>
-              </Link>
-              <Link
-                to="/account/register"
-                onClick={onClose}
-                className="flex items-center justify-center gap-2 py-2 px-3 text-xs font-semibold bg-[#c4622d] text-white rounded-[5px] hover:bg-[#923f12] shadow-xs transition-colors"
-              >
-                <UserPlus className="w-3.5 h-3.5" />
-                <span>Sign Up</span>
-              </Link>
-            </div>
-          )}
+        <div className="p-5 border-t border-[#e8e4df] flex flex-col gap-3 bg-[#f5f0e8]">
+          <Link
+            to="/account"
+            onClick={onClose}
+            className="flex items-center gap-2.5 text-sm font-medium text-[#1a1a1a] hover:text-[#c4622d] py-1.5 transition-colors"
+          >
+            <User className="w-4 h-4 text-[#8b7355]" />
+            <span>My Account / Login</span>
+          </Link>
+          <Link
+            to="/cart"
+            onClick={onClose}
+            className="flex items-center gap-2.5 text-sm font-medium text-[#1a1a1a] hover:text-[#c4622d] py-1.5 transition-colors"
+          >
+            <ShoppingBag className="w-4 h-4 text-[#8b7355]" />
+            <span>View Shopping Cart</span>
+          </Link>
         </div>
       </div>
     </div>

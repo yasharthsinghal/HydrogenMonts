@@ -1,1 +1,1 @@
-export { loader, action, meta, default } from './account.login';
+export { loader } from './account.login';

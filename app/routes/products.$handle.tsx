@@ -1,4 +1,4 @@
-import { Link, useLoaderData, useFetcher, useNavigate, useLocation, useRouteLoaderData, type MetaFunction, type LoaderFunctionArgs } from "react-router";
+import { Link, useLoaderData, useFetcher, useNavigate, useRouteLoaderData, type MetaFunction, type LoaderFunctionArgs } from "react-router";
 import { useState, useEffect } from "react";
 import { useOptimisticCart } from "@shopify/hydrogen";
 import {
@@ -101,9 +101,7 @@ export default function ProductDetailRoute() {
         useLoaderData<typeof loader>();
 
     const navigate = useNavigate();
-    const location = useLocation();
-    const rootData = useRouteLoaderData("root") as { cart?: any; isLoggedIn?: boolean } | undefined;
-    const isLoggedIn = Boolean(rootData?.isLoggedIn);
+    const rootData = useRouteLoaderData("root") as { cart?: any } | undefined;
     const cart = useOptimisticCart(
         normalizeCartForOptimistic(rootData?.cart),
     );
@@ -214,10 +212,6 @@ export default function ProductDetailRoute() {
     };
 
     const handleAddToCart = () => {
-        if (!isLoggedIn) {
-            navigate(`/account/login?return_to=${encodeURIComponent(location.pathname)}`);
-            return;
-        }
         if (isInCart) {
             navigate("/cart");
             return;
@@ -246,10 +240,6 @@ export default function ProductDetailRoute() {
     };
 
     const handleBuyNow = () => {
-        if (!isLoggedIn) {
-            navigate(`/account/login?return_to=${encodeURIComponent(location.pathname)}`);
-            return;
-        }
         if (isInCart) {
             navigate("/checkout");
             return;
@@ -359,7 +349,7 @@ export default function ProductDetailRoute() {
     ];
 
     return (
-        <div className='w-full max-w-[1920px] mx-auto px-3 sm:px-4 md:px-5 pt-3 pb-24 md:pb-14'>
+        <div className='max-w-[1400px] mx-auto px-4 sm:px-6 md:px-12 pt-3 pb-24 md:pb-14'>
             {/* Product JSON-LD */}
             <script
                 type='application/ld+json'
