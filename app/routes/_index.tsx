@@ -1,9 +1,14 @@
 import { useState, useEffect } from 'react';
-import { useLoaderData, Link, type MetaFunction, type LoaderFunctionArgs } from 'react-router';
+import { useLoaderData, Link, useNavigate, useLocation, type MetaFunction, type LoaderFunctionArgs } from 'react-router';
 import { HOMEPAGE_QUERY } from '~/graphql/StorefrontQueries';
 import type { ProductCardItem, CollectionCardItem } from '~/types/storefront.types';
 import { ProductGrid } from '~/components/products/ProductGrid';
 import { useScrollReveal } from '~/hooks/useScrollReveal';
+import { HeroBannerSlider } from '~/components/home/HeroBannerSlider';
+import heroBannersConfig from '~/data/hero-banners.json';
+import type { HeroBannerItem } from '~/types/banner.types';
+import collectionsConfig from '~/data/collections.json';
+import type { CollectionConfigItem } from '~/types/collection.types';
 import {
   Sparkles,
   ArrowRight,
@@ -65,18 +70,59 @@ export async function loader({ request, context }: LoaderFunctionArgs) {
     };
   }
 
+  const PAGE_SIZE = 25;
+  const rawPage = parseInt(url.searchParams.get('page') || '1', 10);
+  const requestedPage = isNaN(rawPage) || rawPage < 1 ? 1 : rawPage;
+  const totalCatalogCount = (homepageData.allProducts?.nodes || []).length;
+  const totalPages = Math.max(1, Math.ceil(totalCatalogCount / PAGE_SIZE));
+  const validPage = Math.min(requestedPage, totalPages);
+  const startIndex = (validPage - 1) * PAGE_SIZE;
+  const paginatedCatalog = (homepageData.allProducts?.nodes || []).slice(
+    startIndex,
+    startIndex + PAGE_SIZE
+  ) as ProductCardItem[];
+
+  const pagination = {
+    currentPage: validPage,
+    totalPages,
+    totalCount: totalCatalogCount,
+    pageSize: PAGE_SIZE,
+    hasNextPage: validPage < totalPages,
+    hasPreviousPage: validPage > 1,
+    startItem: totalCatalogCount === 0 ? 0 : startIndex + 1,
+    endItem: Math.min(startIndex + PAGE_SIZE, totalCatalogCount),
+  };
+
   return {
     baseUrl,
     shop: homepageData.shop,
     collections: (homepageData.collections?.nodes || []) as CollectionCardItem[],
     featuredProducts: (homepageData.featuredProducts?.nodes || []) as ProductCardItem[],
     allProducts: (homepageData.allProducts?.nodes || []) as ProductCardItem[],
+    paginatedCatalog,
+    pagination,
   };
 }
 
 export default function IndexRoute() {
   useScrollReveal();
-  const { baseUrl, collections, featuredProducts, allProducts } = useLoaderData<typeof loader>();
+  const { baseUrl, collections, featuredProducts, allProducts, paginatedCatalog, pagination } =
+    useLoaderData<typeof loader>();
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  const handlePageChange = (newPage: number) => {
+    if (newPage < 1 || newPage > pagination.totalPages || newPage === pagination.currentPage) {
+      return;
+    }
+    const searchParams = new URLSearchParams(location.search);
+    searchParams.set('page', newPage.toString());
+    navigate(`?${searchParams.toString()}#all-products`, { preventScrollReset: true });
+    const el = document.getElementById('all-products');
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth' });
+    }
+  };
 
   const catalogImages = [
     ...featuredProducts.map((product) => getImageUrl(product.featuredImage)),
@@ -90,109 +136,37 @@ export default function IndexRoute() {
   const newArrivalsImage = getImageUrl(allProducts[0]?.featuredImage) || catalogImages[1] || heroImage1;
   const craftImage = getImageUrl(collections[0]?.image) || catalogImages[2] || heroImage1;
 
-  // Hero Slider Banners definition for Vastra by Monty / MONTS
-  const heroBanners = [
-    {
-      badge: 'Vastra by Monty is now MONTS',
-      title: 'Timeless Luxury, Handcrafted Silhouettes',
-      subtitle: 'Artisanal Rajasthan block prints & premium long-staple cotton apparel crafted for contemporary luxury.',
-      ctaText: 'Shop All Products',
-      ctaLink: '/collections/all',
-      secondaryText: 'Explore Categories',
-      secondaryLink: '#categories',
-      image: heroImage1,
-    },
-    {
-      badge: 'Signature Handcrafted Bags',
-      title: 'Quilted Cotton Totes & Pouch Sets',
-      subtitle: 'Block-printed canvas totes, multi-utility pouch sets, and everyday travel essentials made with care.',
-      ctaText: 'Shop Bags & Totes',
-      ctaLink: '/collections/monts-bags',
-      secondaryText: 'View Collections',
-      secondaryLink: '/collections',
-      image: heroImage2,
-    },
-    {
-      badge: 'Limited Artisanal Batches',
-      title: 'Modern Minimalist Apparel & Accessories',
-      subtitle: 'Discover handcrafted kurtas, casual shirts, heavyweight hoodies, and refined everyday essentials.',
-      ctaText: 'Explore New Arrivals',
-      ctaLink: '/collections/all',
-      secondaryText: 'Wholesale Orders',
-      secondaryLink: '/wholesale',
-      image: heroImage3,
-    },
-  ];
+  // JSON-driven hero banners mapping with catalog fallback resilience
+  const heroBanners: HeroBannerItem[] = (heroBannersConfig as HeroBannerItem[]).map((banner, idx) => ({
+    ...banner,
+    imageDesktop: banner.imageDesktop || catalogImages[idx % (catalogImages.length || 1)] || heroImage1,
+    imageMobile: banner.imageMobile || banner.imageDesktop || catalogImages[idx % (catalogImages.length || 1)] || heroImage1,
+  }));
 
-  const [currentSlide, setCurrentSlide] = useState(0);
+  // Main 12 Categories List for "Shop By Category" derived from collections.json
+  const activeJsonCollections = (collectionsConfig as CollectionConfigItem[]).filter(
+    (c) => c.isActive !== false && c.handle !== 'all'
+  );
 
-  // Hero Carousel Autoplay
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setCurrentSlide((prev) => (prev + 1) % heroBanners.length);
-    }, 6000);
-    return () => clearInterval(timer);
-  }, [heroBanners.length]);
+  const mainCategories = activeJsonCollections.map((col, idx) => {
+    const matchedProduct = allProducts.find((p) => {
+      const title = p.title.toLowerCase();
+      const keywords = col.keywords || [col.handle];
+      return keywords.some((k) => title.includes(k.toLowerCase()));
+    });
 
-  const handlePrevSlide = () => {
-    setCurrentSlide((prev) => (prev === 0 ? heroBanners.length - 1 : prev - 1));
-  };
-
-  const handleNextSlide = () => {
-    setCurrentSlide((prev) => (prev + 1) % heroBanners.length);
-  };
-
-  // Main Categories List for "Shop By Category" section
-  const mainCategories = [
-    {
-      title: 'Tote Bags',
-      handle: 'tote-bags',
-      href: '/collections/tote-bags',
-      subtitle: 'Quilted & handblocked cotton canvas totes',
-      badge: 'Bags & Totes',
-      image: getImageUrl(allProducts.find((p) => p.title.toLowerCase().includes('tote'))?.featuredImage) || catalogImages[0],
-    },
-    {
-      title: 'Pouch Bags (Toiletry Sets)',
-      handle: 'pouch-bags-toiletry-sets',
-      href: '/collections/pouch-bags-toiletry-sets',
-      subtitle: 'Multi-utility organized pouch sets',
-      badge: 'Pouches',
-      image: getImageUrl(allProducts.find((p) => p.title.toLowerCase().includes('pouch') || p.title.toLowerCase().includes('set'))?.featuredImage) || catalogImages[1],
-    },
-    {
-      title: 'Mobile Sling Bags',
-      handle: 'mobile-sling-bags',
-      href: '/collections/mobile-sling-bags',
-      subtitle: 'Cross-shoulder quilted cotton slings',
-      badge: 'Slings',
-      image: getImageUrl(allProducts.find((p) => p.title.toLowerCase().includes('sling'))?.featuredImage) || catalogImages[2],
-    },
-    {
-      title: 'Duffle Bags',
-      handle: 'duffle-bags',
-      href: '/collections/duffle-bags',
-      subtitle: 'Artisanal weekenders & travel duffle bags',
-      badge: 'Travel',
-      image: getImageUrl(allProducts.find((p) => p.title.toLowerCase().includes('duffle'))?.featuredImage) || catalogImages[3],
-    },
-    {
-      title: 'Laptop Bags & Office',
-      handle: 'laptop-bags-office-essentials',
-      href: '/collections/laptop-bags-office-essentials',
-      subtitle: 'Quilted laptop sleeves & office totes',
-      badge: 'Work & Office',
-      image: getImageUrl(allProducts.find((p) => p.title.toLowerCase().includes('laptop'))?.featuredImage) || catalogImages[4],
-    },
-    {
-      title: 'Multi-Utility Organizers',
-      handle: 'multi-utility-organizers',
-      href: '/collections/multi-utility-organizers',
-      subtitle: 'Signature vanity & tool organizers',
-      badge: 'Organizers',
-      image: getImageUrl(allProducts.find((p) => p.title.toLowerCase().includes('organizer') || p.title.toLowerCase().includes('vanity'))?.featuredImage) || catalogImages[5],
-    },
-  ];
+    return {
+      title: col.title,
+      handle: col.handle,
+      href: `/collections/${col.handle}`,
+      subtitle: col.subtitle || col.description || '',
+      badge: col.badge || 'Artisanal',
+      image:
+        getImageUrl(matchedProduct?.featuredImage) ||
+        col.image ||
+        catalogImages[idx % Math.max(catalogImages.length, 1)],
+    };
+  });
 
   const schemaJsonLd = {
     '@context': 'https://schema.org',
@@ -233,117 +207,13 @@ export default function IndexRoute() {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(schemaJsonLd) }}
       />
 
-      {/* ─── 1. HERO BANNERS CAROUSEL ─── */}
-      <section className="relative w-full overflow-hidden bg-[#060505]" style={{ minHeight: '82vh' }}>
-        {heroBanners.map((banner, index) => (
-          <div
-            key={banner.title + index}
-            className={`absolute inset-0 transition-opacity duration-1000 ease-in-out flex items-center justify-center ${
-              index === currentSlide ? 'opacity-100 pointer-events-auto z-10' : 'opacity-0 pointer-events-none z-0'
-            }`}
-          >
-            {/* Slide Background Image */}
-            <div className="absolute inset-0">
-              {banner.image && (
-                <img
-                  src={banner.image}
-                  alt={banner.title}
-                  className="w-full h-full object-cover transform scale-105 transition-transform duration-10000"
-                  style={{ objectPosition: 'center 30%' }}
-                  onError={hideBrokenImage}
-                />
-              )}
-              <div
-                className="absolute inset-0"
-                style={{
-                  background:
-                    'linear-gradient(to bottom, rgba(6,5,5,0.2) 0%, rgba(6,5,5,0.65) 60%, rgba(6,5,5,0.9) 100%)',
-                }}
-              />
-            </div>
-
-            {/* Slide Banner Content */}
-            <div className="relative z-10 text-center px-6 max-w-3xl mx-auto flex flex-col items-center gap-6">
-              <span
-                className="text-xs uppercase tracking-[0.35em] font-semibold flex items-center gap-2 text-[#e8dfd5] bg-[#060505]/40 backdrop-blur-md px-4 py-1.5 rounded-full border border-white/15"
-                style={{ fontFamily: "'DM Sans', sans-serif" }}
-              >
-                <Sparkles className="w-3.5 h-3.5 text-[#c4622d]" />
-                {banner.badge}
-              </span>
-              <h1
-                className="text-3xl sm:text-5xl lg:text-7xl font-bold leading-tight text-white drop-shadow-sm"
-                style={{ fontFamily: "'Playfair Display', serif" }}
-              >
-                {banner.title}
-              </h1>
-              <p
-                className="text-base sm:text-xl font-light max-w-xl text-white/90 leading-relaxed"
-                style={{ fontFamily: "'Cormorant', serif" }}
-              >
-                {banner.subtitle}
-              </p>
-              <div className="flex flex-wrap items-center justify-center gap-4 pt-2">
-                <Link
-                  to={banner.ctaLink}
-                  className="inline-flex items-center justify-center px-8 py-3.5 text-sm font-semibold rounded-[6px] transition-all bg-[#c4622d] text-white hover:bg-[#923f12] active:scale-95 cursor-pointer shadow-lg"
-                  style={{ fontFamily: "'DM Sans', sans-serif" }}
-                >
-                  {banner.ctaText}
-                </Link>
-                <a
-                  href={banner.secondaryLink}
-                  className="inline-flex items-center justify-center px-8 py-3.5 text-sm font-semibold rounded-[6px] transition-all text-white border border-white/40 bg-white/10 hover:bg-white/20 backdrop-blur-xs active:scale-95 cursor-pointer"
-                  style={{ fontFamily: "'DM Sans', sans-serif" }}
-                >
-                  {banner.secondaryText}
-                </a>
-              </div>
-            </div>
-          </div>
-        ))}
-
-        {/* Carousel Prev/Next Navigation Controls */}
-        <button
-          type="button"
-          onClick={handlePrevSlide}
-          className="absolute left-4 md:left-8 top-1/2 -translate-y-1/2 z-20 w-11 h-11 rounded-full bg-[#060505]/40 hover:bg-[#c4622d] text-white border border-white/20 flex items-center justify-center transition-all cursor-pointer backdrop-blur-xs"
-          aria-label="Previous banner slide"
-        >
-          <ChevronLeft className="w-6 h-6" />
-        </button>
-
-        <button
-          type="button"
-          onClick={handleNextSlide}
-          className="absolute right-4 md:right-8 top-1/2 -translate-y-1/2 z-20 w-11 h-11 rounded-full bg-[#060505]/40 hover:bg-[#c4622d] text-white border border-white/20 flex items-center justify-center transition-all cursor-pointer backdrop-blur-xs"
-          aria-label="Next banner slide"
-        >
-          <ChevronRight className="w-6 h-6" />
-        </button>
-
-        {/* Carousel Indicator Dots */}
-        <div className="absolute bottom-6 inset-x-0 z-20 flex items-center justify-center gap-2.5">
-          {heroBanners.map((_, idx) => (
-            <button
-              key={idx}
-              type="button"
-              onClick={() => setCurrentSlide(idx)}
-              className={`transition-all duration-300 rounded-full cursor-pointer ${
-                idx === currentSlide
-                  ? 'w-8 h-2 bg-[#c4622d]'
-                  : 'w-2 h-2 bg-white/50 hover:bg-white/80'
-              }`}
-              aria-label={`Go to slide ${idx + 1}`}
-            />
-          ))}
-        </div>
-      </section>
+      {/* ─── 1. HERO BANNERS CAROUSEL (JSON-Driven) ─── */}
+      <HeroBannerSlider banners={heroBanners} fallbackImage={heroImage1} />
 
       {/* ─── 2. SHOP BY CATEGORY SECTION ("later categories") ─── */}
-      <section id="categories" className="py-16 md:py-24 bg-[#faf8f5] scroll-mt-20">
-        <div className="max-w-[1400px] mx-auto px-6 md:px-12">
-          <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-12 pb-4 border-b border-[#e8e4df] gap-4">
+      <section id="categories" className="py-12 md:py-16 bg-[#faf8f5] scroll-mt-20">
+        <div className="w-full max-w-[1920px] mx-auto px-3 sm:px-4 md:px-5">
+          <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-8 pb-3 border-b border-[#e8e4df] gap-3">
             <div>
               <span
                 className="text-xs uppercase tracking-[0.25em] font-semibold block mb-1 text-[#8b7355]"
@@ -352,34 +222,34 @@ export default function IndexRoute() {
                 Vastra by Monty Catalog
               </span>
               <h2
-                className="text-3xl md:text-4xl font-bold text-[#060505]"
+                className="text-2xl sm:text-3xl font-bold text-[#060505]"
                 style={{ fontFamily: "'Playfair Display', serif" }}
               >
                 Shop By Category
               </h2>
               <p
-                className="text-sm mt-1 text-[#686764]"
-                style={{ fontFamily: "'Cormorant', serif", fontSize: '1.15rem' }}
+                className="text-xs sm:text-sm mt-0.5 text-[#686764]"
+                style={{ fontFamily: "'Cormorant', serif", fontSize: '1.05rem' }}
               >
-                Explore handcrafted Rajasthan block prints, pure cotton shirts, tees, hoodies, and signature canvas totes.
+                Explore handcrafted Rajasthan block prints, pure cotton shirts, quilted bags, and signature canvas totes.
               </p>
             </div>
             <Link
-              to="/collections/all"
+              to="/collections"
               className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-[#c4622d] hover:text-[#923f12] transition-colors shrink-0"
               style={{ fontFamily: "'DM Sans', sans-serif" }}
             >
               <span>View All Categories</span>
-              <ArrowRight className="w-4 h-4" />
+              <ArrowRight className="w-3.5 h-3.5" />
             </Link>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3 sm:gap-4 lg:gap-4">
             {mainCategories.map((category) => (
               <Link
                 key={category.title}
                 to={category.href}
-                className="group relative overflow-hidden rounded-[8px] bg-white border border-[#e8e4df] shadow-xs hover:shadow-xl transition-all duration-300 flex flex-col"
+                className="group relative overflow-hidden rounded-[8px] bg-white border border-[#e8e4df] shadow-2xs hover:shadow-md transition-all duration-300 flex flex-col hover:-translate-y-0.5"
               >
                 <div className="relative w-full aspect-[4/3] overflow-hidden bg-[#f0edea]">
                   {category.image ? (
@@ -387,38 +257,38 @@ export default function IndexRoute() {
                       src={category.image}
                       alt={category.title}
                       loading="lazy"
-                      className="w-full h-full object-cover group-hover:scale-108 transition-transform duration-700"
+                      className="w-full h-full object-cover group-hover:scale-106 transition-transform duration-500"
                       onError={hideBrokenImage}
                     />
                   ) : (
                     <div className="w-full h-full bg-[#e8dfd5] flex items-center justify-center text-[#8b7355]">
-                      <ShoppingBag className="w-12 h-12 opacity-30" />
+                      <ShoppingBag className="w-8 h-8 opacity-30" />
                     </div>
                   )}
-                  <div className="absolute inset-0 bg-gradient-to-t from-[#060505]/75 via-transparent to-transparent opacity-80 group-hover:opacity-90 transition-opacity" />
-                  <span className="absolute top-3.5 left-3.5 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest bg-white/90 text-[#060505] shadow-xs">
+                  <div className="absolute inset-0 bg-gradient-to-t from-[#060505]/65 via-transparent to-transparent opacity-70 group-hover:opacity-80 transition-opacity" />
+                  <span className="absolute top-2 left-2 px-1.5 py-0.5 rounded-[4px] text-[8.5px] font-bold uppercase tracking-wider bg-white/95 text-[#060505] shadow-2xs backdrop-blur-xs">
                     {category.badge}
                   </span>
                 </div>
 
-                <div className="p-5 flex flex-col justify-between flex-1 bg-white">
+                <div className="p-2.5 sm:p-3 flex flex-col justify-between flex-1 bg-white">
                   <div>
                     <h3
-                      className="text-lg font-bold text-[#060505] group-hover:text-[#c4622d] transition-colors"
+                      className="text-xs sm:text-sm font-bold text-[#060505] group-hover:text-[#c4622d] transition-colors leading-tight line-clamp-1"
                       style={{ fontFamily: "'Playfair Display', serif" }}
                     >
                       {category.title}
                     </h3>
                     <p
-                      className="text-xs text-[#686764] mt-1 font-normal"
+                      className="text-[10px] sm:text-[11px] text-[#686764] mt-0.5 font-normal line-clamp-1"
                       style={{ fontFamily: "'DM Sans', sans-serif" }}
                     >
                       {category.subtitle}
                     </p>
                   </div>
-                  <div className="mt-4 pt-3 border-t border-[#f0edea] flex items-center justify-between text-xs font-semibold text-[#c4622d]">
-                    <span>Explore Products</span>
-                    <ArrowRight className="w-4 h-4 transform group-hover:translate-x-1 transition-transform" />
+                  <div className="mt-2 pt-2 border-t border-[#f0edea] flex items-center justify-between text-[10px] sm:text-[11px] font-semibold text-[#c4622d]">
+                    <span>Explore</span>
+                    <ArrowRight className="w-3 h-3 transform group-hover:translate-x-0.5 transition-transform" />
                   </div>
                 </div>
               </Link>
@@ -430,7 +300,7 @@ export default function IndexRoute() {
       {/* ─── 2. CURATED SERIES / FEATURED COLLECTIONS ─── */}
       {collections.length > 0 && (
         <section className="py-20 bg-[#f5f0e8] reveal">
-          <div className="max-w-[1400px] mx-auto px-6 md:px-12">
+          <div className="w-full max-w-[1920px] mx-auto px-3 sm:px-4 md:px-5">
             <div className="flex justify-between items-end mb-10 pb-4 border-b border-[#e8e4df]">
               <div>
                 <span
@@ -609,7 +479,7 @@ export default function IndexRoute() {
 
       {/* ─── 4. FEATURED PRODUCTS ─── */}
       <section className="py-20 bg-[#f5f0e8] reveal">
-        <div className="max-w-[1400px] mx-auto px-6 md:px-12">
+        <div className="w-full max-w-[1920px] mx-auto px-3 sm:px-4 md:px-5">
           <div className="text-center max-w-xl mx-auto mb-12">
             <span
               className="text-xs uppercase tracking-[0.25em] font-medium block mb-2 text-[#8b7355]"
@@ -634,10 +504,10 @@ export default function IndexRoute() {
         </div>
       </section>
 
-      {/* ─── 5. FULL CATALOG GRID ─── */}
-      <section className="py-20 bg-[#f8f8f8] reveal">
-        <div className="max-w-[1400px] mx-auto px-6 md:px-12">
-          <div className="flex justify-between items-center mb-10 pb-4 border-b border-[#e8e4df]">
+      {/* ─── 5. FULL CATALOG GRID (25 Products Per Page with Pagination) ─── */}
+      <section id="all-products" className="py-20 bg-[#f8f8f8] reveal scroll-mt-20">
+        <div className="w-full max-w-[1920px] mx-auto px-3 sm:px-4 md:px-5">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-10 pb-4 border-b border-[#e8e4df] gap-4">
             <div>
               <span
                 className="text-xs uppercase tracking-[0.2em] font-medium block mb-1 text-[#8b7355]"
@@ -654,13 +524,87 @@ export default function IndexRoute() {
             </div>
             <Link
               to="/collections/all"
-              className="flex items-center gap-1 text-xs font-semibold text-[#c4622d] hover:text-[#923f12] transition-colors"
+              className="inline-flex items-center gap-1 text-xs font-semibold text-[#c4622d] hover:text-[#923f12] transition-colors shrink-0"
               style={{ fontFamily: "'DM Sans', sans-serif" }}
             >
-              Browse full catalog <ArrowRight className="w-3.5 h-3.5" />
+              Browse complete collection <ArrowRight className="w-3.5 h-3.5" />
             </Link>
           </div>
-          <ProductGrid products={allProducts} />
+
+          <ProductGrid products={paginatedCatalog} />
+
+          {/* 25-Product Pagination Bar */}
+          {pagination.totalPages > 1 && (
+            <div
+              className="mt-12 pt-6 border-t border-[#e8e4df] flex flex-col sm:flex-row items-center justify-between gap-4"
+              style={{ fontFamily: "'DM Sans', sans-serif" }}
+            >
+              <p className="text-xs text-[#686764]">
+                Showing <span className="font-semibold text-[#060505]">{pagination.startItem}</span>–
+                <span className="font-semibold text-[#060505]">{pagination.endItem}</span> of{' '}
+                <span className="font-semibold text-[#060505]">{pagination.totalCount}</span> products (25 per page)
+              </p>
+
+              <div className="flex items-center gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => handlePageChange(pagination.currentPage - 1)}
+                  disabled={!pagination.hasPreviousPage}
+                  className="flex items-center gap-1 px-3 py-2 text-xs font-semibold rounded-[4px] border border-[#e8e4df] text-[#1a1a1a] bg-[#faf8f5] hover:bg-[#f0edea] disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer"
+                  aria-label="Previous catalog page"
+                >
+                  <ChevronLeft className="w-3.5 h-3.5" />
+                  <span>Previous</span>
+                </button>
+
+                <div className="flex items-center gap-1">
+                  {Array.from({ length: pagination.totalPages }, (_, i) => i + 1).map((pageNum) => {
+                    if (
+                      pagination.totalPages > 7 &&
+                      pageNum !== 1 &&
+                      pageNum !== pagination.totalPages &&
+                      Math.abs(pageNum - pagination.currentPage) > 1
+                    ) {
+                      if (pageNum === 2 || pageNum === pagination.totalPages - 1) {
+                        return (
+                          <span key={pageNum} className="px-1 text-xs text-[#8b7355]">
+                            …
+                          </span>
+                        );
+                      }
+                      return null;
+                    }
+
+                    return (
+                      <button
+                        key={pageNum}
+                        type="button"
+                        onClick={() => handlePageChange(pageNum)}
+                        className={`w-8 h-8 flex items-center justify-center text-xs font-semibold rounded-[4px] transition-all cursor-pointer ${
+                          pageNum === pagination.currentPage
+                            ? 'bg-[#c4622d] text-white shadow-xs'
+                            : 'border border-[#e8e4df] text-[#1a1a1a] bg-[#faf8f5] hover:bg-[#f0edea]'
+                        }`}
+                      >
+                        {pageNum}
+                      </button>
+                    );
+                  })}
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => handlePageChange(pagination.currentPage + 1)}
+                  disabled={!pagination.hasNextPage}
+                  className="flex items-center gap-1 px-3 py-2 text-xs font-semibold rounded-[4px] border border-[#e8e4df] text-[#1a1a1a] bg-[#faf8f5] hover:bg-[#f0edea] disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer"
+                  aria-label="Next catalog page"
+                >
+                  <span>Next</span>
+                  <ChevronRight className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </section>
 
@@ -672,7 +616,7 @@ export default function IndexRoute() {
           borderBottom: '1px solid #dac7b4',
         }}
       >
-        <div className="max-w-[1400px] mx-auto px-6 md:px-12 grid grid-cols-1 md:grid-cols-3 gap-10 text-center">
+        <div className="w-full max-w-[1920px] mx-auto px-3 sm:px-4 md:px-5 grid grid-cols-1 md:grid-cols-3 gap-8 text-center">
           <div className="flex flex-col items-center gap-3">
             <div className="w-12 h-12 flex items-center justify-center rounded-full bg-[#c4622d]/10 text-[#c4622d]">
               <Truck className="w-6 h-6" />

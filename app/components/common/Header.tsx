@@ -1,21 +1,25 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Link, useNavigate, useLocation, useFetcher } from 'react-router';
+import { Link, useNavigate, useLocation, useFetcher, useRouteLoaderData } from 'react-router';
 import { AnnouncementBar } from './AnnouncementBar';
 import { Navigation } from './Navigation';
-import { Search, X, ShoppingBag, User, Menu, ArrowRight, Loader2, Sparkles } from 'lucide-react';
+import { Search, X, ShoppingBag, User, Menu, ArrowRight, Loader2, Sparkles, LogIn, UserPlus } from 'lucide-react';
 import type { ProductCardItem } from '~/types/storefront.types';
 
 export interface HeaderProps {
   cartCount?: number;
+  isLoggedIn?: boolean;
   onOpenMobileNav?: () => void;
   onOpenSearch?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
   cartCount = 0,
+  isLoggedIn: propIsLoggedIn,
   onOpenMobileNav,
   onOpenSearch,
 }) => {
+  const rootData = useRouteLoaderData<{ isLoggedIn?: boolean }>('root');
+  const loggedIn = propIsLoggedIn ?? Boolean(rootData?.isLoggedIn);
   const [isScrolled, setIsScrolled] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -125,49 +129,41 @@ export const Header: React.FC<HeaderProps> = ({
             : 'bg-[#faf8f5] border-[#e8e4df]'
         }`}
       >
-        <div className="max-w-[1400px] mx-auto px-6 md:px-12 flex items-center justify-between gap-4">
-          {/* Left: Mobile hamburger */}
-          <button
-            onClick={onOpenMobileNav}
-            className="md:hidden p-1.5 rounded-full transition-all text-[#1a1a1a] hover:text-[#c4622d] hover:bg-[#f0edea] active:scale-90 cursor-pointer"
-            aria-label="Open mobile menu"
-          >
-            <Menu className="w-5 h-5" />
-          </button>
+        <div className="w-full max-w-[1920px] mx-auto px-3 sm:px-4 md:px-5 flex items-center justify-between gap-4 md:gap-6">
+          {/* Left: Mobile hamburger + Logo + Desktop Navigation grouped on the left */}
+          <div className="flex items-center gap-7 lg:gap-10">
+            <button
+              onClick={onOpenMobileNav}
+              className="md:hidden p-1.5 rounded-full transition-all text-[#1a1a1a] hover:text-[#c4622d] hover:bg-[#f0edea] active:scale-90 cursor-pointer"
+              aria-label="Open mobile menu"
+            >
+              <Menu className="w-5 h-5" />
+            </button>
 
-          {/* Logo & Rebrand Notice */}
-          <div className="flex items-center gap-3 shrink-0">
+            {/* Logo & Brand Lockup */}
             <Link
               to="/"
-              className="flex items-center shrink-0 hover:opacity-85 transition-opacity"
-              aria-label="MONTS Home"
+              className="flex flex-col items-center justify-center text-center leading-none group hover:opacity-90 transition-opacity shrink-0"
+              aria-label="MONTS - Vastra by Monty"
             >
               <img
                 src="/monts_logo.png"
                 alt="MONTS"
-                className="h-8 md:h-9.5 w-auto object-contain"
+                className="h-8 md:h-9.5 w-auto object-contain mx-auto"
               />
+              <span className="text-[6.5px] md:text-[7.5px] tracking-[0.08em] uppercase font-semibold text-[#8b7355] mt-0.5 whitespace-nowrap text-center block">
+                Vastra by Monty
+              </span>
             </Link>
 
-            {/* Rebrand Notice Pill */}
-            <div className="hidden lg:flex items-center pl-1">
-              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#f0edea]/85 border border-[#e8e4df] text-[10.5px] text-[#686764] shadow-[0_1px_2px_rgba(0,0,0,0.02)] transition-colors hover:border-[#dac7b4]">
-                <Sparkles className="w-3 h-3 text-[#c4622d] shrink-0" />
-                <span className="tracking-wide whitespace-nowrap">
-                  <span className="font-semibold text-[#1a1a1a]">Vastra by Monty</span> is now{' '}
-                  <span className="font-bold text-[#c4622d] tracking-wide">MONTS</span>
-                </span>
-              </span>
+            {/* Desktop Navigation right alongside logo (not in the middle) */}
+            <div className="hidden md:flex items-center">
+              <Navigation />
             </div>
           </div>
 
-          {/* Center: Desktop Navigation */}
-          <div className="hidden md:flex flex-1 justify-center">
-            <Navigation />
-          </div>
-
           {/* Right: Actions */}
-          <div className="flex items-center gap-1.5 sm:gap-2.5">
+          <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
             {/* Search Toggle Button */}
             <button
               type="button"
@@ -178,32 +174,53 @@ export const Header: React.FC<HeaderProps> = ({
               {searchOpen ? <X className="w-4.5 h-4.5" /> : <Search className="w-4.5 h-4.5" />}
             </button>
 
-            {/* Account */}
-            <Link
-              to="/account"
-              className="p-1.5 text-[#1a1a1a] hover:text-[#c4622d] hover:bg-[#f0edea] active:scale-90 rounded-full transition-all"
-              aria-label="Customer Account"
-            >
-              <User className="w-4.5 h-4.5" />
-            </Link>
-
-            {/* Cart Trigger */}
-            <Link
-              to="/cart"
-              className="relative flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-[5px] bg-[#c4622d] text-white hover:bg-[#923f12] active:scale-95 transition-all cursor-pointer shadow-xs"
-              aria-label="Shopping Cart"
-            >
-              <ShoppingBag className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Cart</span>
-              {cartCount > 0 && (
-                <span
-                  key={cartCount}
-                  className="flex items-center justify-center w-4 h-4 text-[9px] font-bold rounded-full bg-white text-[#c4622d] animate-badge-pop"
+            {loggedIn ? (
+              <>
+                {/* Account */}
+                <Link
+                  to="/account"
+                  className="p-1.5 text-[#1a1a1a] hover:text-[#c4622d] hover:bg-[#f0edea] active:scale-90 rounded-full transition-all"
+                  aria-label="Customer Account"
                 >
-                  {cartCount}
-                </span>
-              )}
-            </Link>
+                  <User className="w-4.5 h-4.5" />
+                </Link>
+
+                {/* Cart Trigger */}
+                <Link
+                  to="/cart"
+                  className="relative flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-[5px] bg-[#c4622d] text-white hover:bg-[#923f12] active:scale-95 transition-all cursor-pointer shadow-xs"
+                  aria-label="Shopping Cart"
+                >
+                  <ShoppingBag className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">Cart</span>
+                  {cartCount > 0 && (
+                    <span
+                      key={cartCount}
+                      className="flex items-center justify-center w-4 h-4 text-[9px] font-bold rounded-full bg-white text-[#c4622d] animate-badge-pop"
+                    >
+                      {cartCount}
+                    </span>
+                  )}
+                </Link>
+              </>
+            ) : (
+              <div className="flex items-center gap-1.5 sm:gap-2">
+                <Link
+                  to="/account/login"
+                  className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium text-[#1a1a1a] hover:text-[#c4622d] hover:bg-[#f0edea] rounded-[5px] transition-all"
+                >
+                  <LogIn className="w-3.5 h-3.5 text-[#8b7355]" />
+                  <span>Login</span>
+                </Link>
+                <Link
+                  to="/account/register"
+                  className="flex items-center gap-1 px-2.5 sm:px-3 py-1.5 text-xs font-semibold rounded-[5px] bg-[#c4622d] text-white hover:bg-[#923f12] active:scale-95 transition-all shadow-xs"
+                >
+                  <UserPlus className="w-3.5 h-3.5" />
+                  <span>Sign Up</span>
+                </Link>
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -214,7 +231,7 @@ export const Header: React.FC<HeaderProps> = ({
           className="w-full bg-[#faf8f5] border-b border-[#e8e4df] shadow-md transition-all"
           style={{ fontFamily: "'DM Sans', sans-serif" }}
         >
-          <div className="max-w-[1400px] mx-auto px-6 md:px-12 py-4">
+          <div className="w-full max-w-[1920px] mx-auto px-3 sm:px-4 md:px-5 py-4">
             <form onSubmit={handleSearchSubmit} className="relative flex items-center max-w-3xl mx-auto">
               <Search className="w-5 h-5 absolute left-4 text-[#686764] pointer-events-none" />
               <input

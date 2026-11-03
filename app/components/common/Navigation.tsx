@@ -4,6 +4,8 @@ import { clsx } from 'clsx';
 import { ChevronDown, ArrowRight, Sparkles } from 'lucide-react';
 import type { CollectionCardItem } from '~/types/storefront.types';
 
+import navigationConfig from '~/data/navigation.json';
+
 export interface NavSubItem {
   label: string;
   href: string;
@@ -13,6 +15,9 @@ export interface NavSubItem {
 export interface NavItem {
   label: string;
   href: string;
+  isActive?: boolean;
+  hasMegaMenu?: boolean;
+  hasDropdown?: boolean;
   children?: NavSubItem[];
 }
 
@@ -29,30 +34,13 @@ export const DEFAULT_COLLECTIONS: NavSubItem[] = [
   { label: 'Kids\' Soft Toys', href: '/collections/kids-soft-toys', description: 'Handcrafted cotton Giraffe & Elephant toys' },
 ];
 
-export const NAV_ITEMS: NavItem[] = [
-  { label: 'Home', href: '/' },
-  {
-    label: 'Shop',
-    href: '/collections/all',
-    children: [
-      { label: 'All Products', href: '/collections/all', description: 'Explore complete handcrafted catalog' },
-      { label: 'Tote Bags', href: '/collections/tote-bags', description: 'Quilted & handblocked canvas totes' },
-      { label: 'Pouch Bags & Toiletry Sets', href: '/collections/pouch-bags-toiletry-sets', description: 'Multi-utility pouch bag sets' },
-      { label: 'Mobile Sling Bags', href: '/collections/mobile-sling-bags', description: 'Cross-shoulder slings & pouches' },
-      { label: 'Duffle Bags', href: '/collections/duffle-bags', description: 'Artisanal weekenders & travel duffles' },
-      { label: 'Laptop Bags & Office', href: '/collections/laptop-bags-office-essentials', description: 'Quilted laptop bags & work totes' },
-      { label: 'Multi-Utility Organizers', href: '/collections/multi-utility-organizers', description: 'Vanity & tool organizers' },
-      { label: 'Sunglasses Covers', href: '/collections/sunglasses-covers', description: 'Structured & crochet sunglass cases' },
-      { label: 'Wallets & Clutches', href: '/collections/wallets-clutches', description: 'Handblocked cotton clutches' },
-      { label: 'Accessories', href: '/collections/accessories', description: 'Hankies, caps & small goods' },
-      { label: 'Kids\' Soft Toys', href: '/collections/kids-soft-toys', description: 'Handcrafted cotton soft toys' },
-    ],
-  },
-  { label: 'Collections', href: '/collections' },
-  { label: 'About Us', href: '/about' },
-  { label: 'Contact', href: '/contact' },
-  { label: 'Wholesale', href: '/wholesale' },
-];
+export const NAV_ITEMS: NavItem[] = (navigationConfig as NavItem[]).filter(
+  (item) =>
+    item.isActive !== false &&
+    item.label !== 'Contact' &&
+    item.label !== 'About Us' &&
+    item.label !== 'Wholesale'
+);
 
 export const Navigation: React.FC = () => {
   const rootData = useRouteLoaderData<{ collections?: CollectionCardItem[] }>('root');
@@ -106,7 +94,7 @@ export const Navigation: React.FC = () => {
 
   return (
     <nav
-      className="hidden md:flex items-center gap-8"
+      className="hidden md:flex items-center gap-5 lg:gap-6"
       style={{ fontFamily: "'DM Sans', sans-serif" }}
     >
       {NAV_ITEMS.map((item) => {
@@ -146,7 +134,7 @@ export const Navigation: React.FC = () => {
 
               {/* Shop Hover Dropdown Mega Menu */}
               <div
-                className={`absolute top-full left-1/2 -translate-x-1/2 pt-2 z-50 transition-all duration-200 ease-out ${
+                className={`absolute top-full left-0 pt-2 z-50 transition-all duration-200 ease-out ${
                   isShopOpen
                     ? 'opacity-100 translate-y-0 scale-100 pointer-events-auto'
                     : 'opacity-0 translate-y-2 scale-95 pointer-events-none'
@@ -256,7 +244,7 @@ export const Navigation: React.FC = () => {
 
               {/* Collections Hover Dropdown Mega Menu */}
               <div
-                className={`absolute top-full left-1/2 -translate-x-1/2 pt-2 z-50 transition-all duration-200 ease-out ${
+                className={`absolute top-full left-0 pt-2 z-50 transition-all duration-200 ease-out ${
                   isCollectionsOpen
                     ? 'opacity-100 translate-y-0 scale-100 pointer-events-auto'
                     : 'opacity-0 translate-y-2 scale-95 pointer-events-none'
