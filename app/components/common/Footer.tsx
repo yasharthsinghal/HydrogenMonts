@@ -21,7 +21,7 @@ export const Footer: React.FC = () => {
     <footer style={{ fontFamily: "'DM Sans', sans-serif" }}>
       {/* Main Footer */}
       <div style={{ backgroundColor: '#1a1a1a', color: '#ffffff' }} className="pt-16 pb-12">
-        <div className="max-w-[1400px] mx-auto px-6 md:px-12">
+        <div className="w-full max-w-[1920px] mx-auto px-3 sm:px-4 md:px-5">
           {/* Newsletter Row */}
           <div
             className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-center pb-12 mb-12"
@@ -110,8 +110,8 @@ export const Footer: React.FC = () => {
                 >
                   MONTS
                 </h4>
-                <p className="text-xs uppercase tracking-[0.2em] text-[#8b7355] mt-0.5 font-medium">
-                  Artisanal Handcraft
+                <p className="text-[10.5px] uppercase tracking-[0.22em] text-[#8b7355] mt-0.5 font-semibold">
+                  Vastra by Monty
                 </p>
               </div>
 
@@ -248,7 +248,7 @@ export const Footer: React.FC = () => {
 
       {/* Sub-Footer */}
       <div className="py-4 px-6 bg-[#0d0d0d] text-white/50 text-xs">
-        <div className="max-w-[1400px] mx-auto flex flex-col sm:flex-row items-center justify-between gap-3">
+        <div className="w-full max-w-[1920px] mx-auto flex flex-col sm:flex-row items-center justify-between gap-3">
           <p>© {new Date().getFullYear()} MONTS. All rights reserved.</p>
           <div className="flex gap-5 text-white/50">
             <Link to="/faq" className="hover:text-white transition-colors">Privacy Policy</Link>

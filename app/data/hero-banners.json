@@ -1,0 +1,50 @@
+[
+  {
+    "id": "vastra-monts-totes",
+    "isActive": true,
+    "displayMode": "overlay",
+    "badge": "Vastra by Monty is now MONTS",
+    "title": "Timeless Luxury, Handcrafted Silhouettes",
+    "subtitle": "Artisanal Rajasthan block prints & premium long-staple cotton apparel crafted for contemporary luxury.",
+    "imageDesktop": "https://d1311wbk6unapo.cloudfront.net/NushopCatalogue/6992ec35317e68f10e6165b0/cat_img/uNTpjZqi_TVNGKOXCZW_2026-07-22_1.jpeg",
+    "imageMobile": "https://d1311wbk6unapo.cloudfront.net/NushopCatalogue/6992ec35317e68f10e6165b0/cat_img/uNTpjZqi_TVNGKOXCZW_2026-07-22_1.jpeg",
+    "ctaText": "Shop Tote Bags",
+    "ctaLink": "/collections/tote-bags",
+    "secondaryText": "View All Collections",
+    "secondaryLink": "/collections",
+    "textAlignment": "center",
+    "overlayDarkness": "medium"
+  },
+  {
+    "id": "pouch-bags-organizers",
+    "isActive": true,
+    "displayMode": "overlay",
+    "badge": "Multi-Utility Everyday Sets",
+    "title": "Quilted Cotton Pouch Sets & Organizers",
+    "subtitle": "Organize your travel and daily essentials with multi-compartment quilted cotton pouches.",
+    "imageDesktop": "https://d1311wbk6unapo.cloudfront.net/NushopCatalogue/6992ec35317e68f10e6165b0/cat_img/mxfQV5LO_CBCX9YKB77_2026-07-22_1.jpeg",
+    "imageMobile": "https://d1311wbk6unapo.cloudfront.net/NushopCatalogue/6992ec35317e68f10e6165b0/cat_img/mxfQV5LO_CBCX9YKB77_2026-07-22_1.jpeg",
+    "ctaText": "Explore Pouch Sets",
+    "ctaLink": "/collections/pouch-bags-toiletry-sets",
+    "secondaryText": "Discover Catalog",
+    "secondaryLink": "/collections/all",
+    "textAlignment": "center",
+    "overlayDarkness": "medium"
+  },
+  {
+    "id": "mobile-slings-accessories",
+    "isActive": true,
+    "displayMode": "overlay",
+    "badge": "Signature Accessories",
+    "title": "Cross-Body Slings & Eyewear Sleeves",
+    "subtitle": "Lightweight, sustainable Jaipur artisan accessories tailored for effortless modern styling.",
+    "imageDesktop": "https://d1311wbk6unapo.cloudfront.net/NushopCatalogue/6992ec35317e68f10e6165b0/cat_img/7Q7texC__SY30GWAFSO_2026-07-24_1.png",
+    "imageMobile": "https://d1311wbk6unapo.cloudfront.net/NushopCatalogue/6992ec35317e68f10e6165b0/cat_img/7Q7texC__SY30GWAFSO_2026-07-24_1.png",
+    "ctaText": "Shop Accessories",
+    "ctaLink": "/collections/accessories",
+    "secondaryText": "Store Concierge",
+    "secondaryLink": "/about",
+    "textAlignment": "center",
+    "overlayDarkness": "medium"
+  }
+]

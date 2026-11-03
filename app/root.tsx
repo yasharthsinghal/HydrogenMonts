@@ -52,10 +52,11 @@ export async function loader({ context, request }: LoaderFunctionArgs) {
       : [];
 
   const customerAccessToken = session.get('customerAccessToken');
+  const customerEmail = session.get('customerEmail');
 
   return {
     cart: cartData,
-    isLoggedIn: Boolean(customerAccessToken),
+    isLoggedIn: Boolean(customerAccessToken || customerEmail),
     publicStoreDomain: env.PUBLIC_STORE_DOMAIN || '',
     collections,
   };
@@ -65,6 +66,7 @@ export function Layout({ children }: { children?: React.ReactNode }) {
   const data = useRouteLoaderData<typeof loader>('root');
   const cart = useOptimisticCart(normalizeCartForOptimistic(data?.cart));
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  const isLoggedIn = Boolean(data?.isLoggedIn);
 
   return (
     <html lang="en" suppressHydrationWarning>
@@ -82,6 +84,7 @@ export function Layout({ children }: { children?: React.ReactNode }) {
 
         <Header
           cartCount={cart?.totalQuantity ?? 0}
+          isLoggedIn={isLoggedIn}
           onOpenMobileNav={() => setMobileNavOpen(true)}
         />
 
@@ -93,6 +96,7 @@ export function Layout({ children }: { children?: React.ReactNode }) {
 
         <MobileNav
           isOpen={mobileNavOpen}
+          isLoggedIn={isLoggedIn}
           onClose={() => setMobileNavOpen(false)}
         />
 
@@ -132,7 +136,7 @@ export function ErrorBoundary() {
   }
 
   return (
-    <div className="max-w-[1400px] mx-auto px-6 py-20 text-center" style={{ fontFamily: "'DM Sans', sans-serif" }}>
+    <div className="w-full max-w-[1920px] mx-auto px-3 sm:px-4 md:px-5 py-20 text-center" style={{ fontFamily: "'DM Sans', sans-serif" }}>
       <h1 className="text-5xl font-bold mb-4 text-[#060505]" style={{ fontFamily: "'Playfair Display', serif" }}>
         {errorStatus}
       </h1>
